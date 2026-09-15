@@ -7,8 +7,10 @@ __pycache__/
 # исходники организатора и большие/производные данные
 org_files/
 solution/
+raw_images/
 filtered/
 service/index/
+models/
 _scratch/
 
 # генерируемое harness
@@ -19,3 +21,7 @@ harness/reports/
 eval/predictions.jsonl
 **/__MACOSX/
 .ipynb_checkpoints/
+
+# IDE
+.idea/
+.vscode/

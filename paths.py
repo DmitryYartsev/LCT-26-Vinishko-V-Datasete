@@ -14,8 +14,8 @@ ORG = ROOT / "org_files"
 CATALOG_SRC = ORG / "strapi_output0709.csv"          # оригинальный дамп каталога (CSV)
 
 # --- сырые данные изображений (gitignore) ---
-UPLOADS = ROOT / "solution/images/_uploads_raw"       # распакованная медиатека Strapi (вход)
-SCRAPED = ROOT / "solution/images/scraped_raw"        # веб-скрейп (в процессе; не трогать)
+UPLOADS = ROOT / "raw_images"                         # распакованная медиатека Strapi (вход)
+SCRAPED = ROOT / "solution/images/scraped_raw"        # веб-скрейп (в процессе; solution/ уберём позже)
 
 # --- обработанные данные (выход process_images.py, gitignore) ---
 FILTERED = ROOT / "filtered"                          # <slug>/NN.webp — все фото по вину

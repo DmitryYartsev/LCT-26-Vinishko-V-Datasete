@@ -58,8 +58,10 @@ service/                    # инференс-сервис                     
 harness/                    # валидация качества (recall@1/@5, ...)         [README]
   build_queryset.py evaluate.py  querysets/ reports/
 filtered/                   # выход process_images: фото по slug + catalog.csv  (gitignore)
+raw_images/                 # распакованная медиатека Strapi (вход process_images) (gitignore)
 org_files/                  # исходники организатора: pdf/pptx/csv/zip/rar     (gitignore)
-solution/images/            # сырые данные: _uploads_raw, scraped_raw          (gitignore)
+models/                     # веса YOLO                                        (gitignore)
+solution/images/scraped_raw # веб-скрейп (временно; solution/ уберём позже)   (gitignore)
 eval/                       # публичный eval + participant_test.sh (скрипт оценщика)
 paths.py  pyproject.toml  README.md  .gitignore
 ```
