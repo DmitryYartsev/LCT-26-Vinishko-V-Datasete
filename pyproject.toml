@@ -9,6 +9,9 @@ dependencies = [
     "numpy>=1.26",
     "pillow>=10.3",
     "tqdm>=4.66",
+    "matplotlib>=3.8",
+    "ultralytics>=8.3",
+    "jupyter>=1.0",
     # CV / модель (torch по умолчанию CPU-сборка с PyPI; для GPU см. README)
     "torch>=2.4",
     "transformers>=4.45",
