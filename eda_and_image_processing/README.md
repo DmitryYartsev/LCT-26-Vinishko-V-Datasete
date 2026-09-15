@@ -10,9 +10,6 @@
 | `eda.ipynb` | EDA каталога (статистика, near-duplicates, покрытие фото, разрешения) |
 | `process_images.py` | **главный скрипт**: дамп → `filtered/<slug>/*.webp` + `filtered/catalog.csv` + npz-индекс |
 | `scrape_images.py` | сбор доп. фото из веба (Yandex + Playwright) → `SCRAPED/` |
-| `eda.py` | скриптовая версия части EDA (legacy, дублирует ноутбук) |
-| `_legacy_dedupe_and_map.py` | прежний матчинг (1 фото/вино); заменён на `process_images.py` |
-| `*.csv`, `*.json`, `archive_filelist.txt` | выгрузки EDA |
 
 ## process_images.py — что делает
 

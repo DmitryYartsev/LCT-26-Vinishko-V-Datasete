@@ -11,10 +11,13 @@ ENV:
   CROP_MIN_CONF=0.25     мин. уверенность детекции
 """
 import os
+from pathlib import Path
 from PIL import Image
 
+# веса YOLO хранятся в одном месте (models/), чтобы не расползались по cwd
+_MODELS = Path(__file__).resolve().parents[1] / "models"
 CROP_ENABLED = os.environ.get("CROP_ENABLED", "1") == "1"
-CROP_MODEL = os.environ.get("CROP_MODEL", "yolo11n.pt")
+CROP_MODEL = os.environ.get("CROP_MODEL", str(_MODELS / "yolo11n.pt"))
 CROP_MARGIN = float(os.environ.get("CROP_MARGIN", "0.06"))
 CROP_MIN_CONF = float(os.environ.get("CROP_MIN_CONF", "0.25"))
 BOTTLE_CLASS = 39  # COCO id класса "bottle"
@@ -23,6 +26,7 @@ BOTTLE_CLASS = 39  # COCO id класса "bottle"
 class BottleCropper:
     def __init__(self, model_name: str = CROP_MODEL):
         from ultralytics import YOLO
+        _MODELS.mkdir(exist_ok=True)          # чтобы веса скачивались сюда, а не в cwd
         self.model = YOLO(model_name)
         self.enabled = True
 
