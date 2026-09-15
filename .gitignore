@@ -1,0 +1,21 @@
+# окружение
+.venv/
+__pycache__/
+*.pyc
+*.pt
+
+# исходники организатора и большие/производные данные
+org_files/
+solution/
+filtered/
+service/index/
+_scratch/
+
+# генерируемое harness
+harness/querysets/
+harness/reports/
+
+# eval-артефакты
+eval/predictions.jsonl
+**/__MACOSX/
+.ipynb_checkpoints/

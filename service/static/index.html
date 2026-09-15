@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Своё Вино — Сканер</title>
+<style>
+  :root{
+    --bg:#FBF5EA; --bg2:#F3E7D5; --card:#FFFDF9; --line:#ece0cd;
+    --accent:#8A2B3B; --accent-d:#74222f; --ink:#2E2A28; --mut:#8a7d70;
+    --ok:#3f7d54; --warn:#b5852a;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+       font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;line-height:1.5}
+  h1,h2,h3,.serif{font-family:Georgia,"Times New Roman",serif}
+  .wrap{max-width:820px;margin:0 auto;padding:16px}
+  header{display:flex;align-items:center;gap:12px;background:var(--bg2);
+         border-radius:16px;padding:12px 18px;margin-bottom:18px}
+  .logo{width:34px;height:34px;border-radius:50%;background:
+        radial-gradient(circle at 30% 30%,#b8455a,#7a2333);flex:0 0 auto}
+  .brand b{font-family:Georgia,serif;font-size:18px}
+  .brand span{display:block;font-size:11px;color:var(--mut);margin-top:-2px}
+  h1{font-size:30px;text-align:center;margin:14px 0 4px}
+  .sub{text-align:center;color:var(--mut);margin:0 0 20px}
+  .drop{background:var(--card);border:2px dashed var(--line);border-radius:18px;
+        padding:26px;text-align:center;transition:.15s;cursor:pointer}
+  .drop.drag{border-color:var(--accent);background:#fff}
+  .drop p{margin:6px 0;color:var(--mut)}
+  .btn{background:var(--accent);color:#fff;border:none;border-radius:999px;
+       padding:12px 26px;font-size:15px;cursor:pointer;transition:.15s}
+  .btn:hover{background:var(--accent-d)}
+  .preview{margin-top:16px;text-align:center}
+  .preview img{max-height:240px;border-radius:14px;border:1px solid var(--line)}
+  .banner{border-radius:14px;padding:12px 16px;margin:18px 0;font-weight:600}
+  .banner.ok{background:#e9f3ec;color:var(--ok);border:1px solid #cfe4d6}
+  .banner.warn{background:#fdf4e2;color:var(--warn);border:1px solid #f0e0bd}
+  .card{display:flex;gap:16px;background:var(--card);border:1px solid var(--line);
+        border-radius:18px;padding:16px;margin-bottom:18px}
+  .card .ph{width:120px;height:170px;flex:0 0 auto;border-radius:12px;
+            background:#f0e8da;object-fit:contain}
+  .card h2{margin:0 0 6px;font-size:22px}
+  .card .win{color:var(--accent);font-weight:600;margin-bottom:8px}
+  .tags{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+  .tag{background:var(--bg2);border-radius:999px;padding:3px 12px;font-size:12px;color:#6a5a4c}
+  .desc{font-size:14px;color:#5c534c;margin-top:8px}
+  .conf{font-size:12px;color:var(--mut);margin-top:10px}
+  .conf b{color:var(--ink)}
+  h3.sec{font-size:15px;color:var(--mut);text-transform:uppercase;letter-spacing:.05em;
+         margin:20px 0 10px;font-family:inherit}
+  .row{display:flex;align-items:center;gap:12px;background:var(--card);
+       border:1px solid var(--line);border-radius:12px;padding:8px 12px;margin-bottom:8px}
+  .row img{width:40px;height:56px;object-fit:contain;border-radius:6px;background:#f0e8da;flex:0 0 auto}
+  .row .rk{width:22px;color:var(--mut);font-weight:700;text-align:center}
+  .row .nm{flex:1;min-width:0}
+  .row .nm b{display:block;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .row .nm span{font-size:12px;color:var(--mut)}
+  .bar{width:84px;flex:0 0 auto}
+  .bar .t{height:6px;background:#eadfce;border-radius:3px;overflow:hidden}
+  .bar .f{height:100%;background:var(--accent)}
+  .bar .v{font-size:11px;color:var(--mut);text-align:right}
+  .hidden{display:none}
+  .spin{display:inline-block;width:22px;height:22px;border:3px solid #e5d8c4;
+        border-top-color:var(--accent);border-radius:50%;animation:s .8s linear infinite}
+  @keyframes s{to{transform:rotate(360deg)}}
+  @media(max-width:520px){.card .ph{width:92px;height:130px}h1{font-size:24px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="logo"></div>
+    <div class="brand"><b>Своё Вино</b><span>Сканер этикеток · демо</span></div>
+  </header>
+
+  <h1>Сканер российских вин</h1>
+  <p class="sub">Загрузите фото этикетки — найдём карточку в каталоге</p>
+
+  <label class="drop" id="drop">
+    <input type="file" id="file" accept="image/*" capture="environment" class="hidden">
+    <p>📷</p>
+    <p><b>Нажмите</b> или перетащите фото сюда</p>
+    <p style="font-size:12px">JPG / PNG / WEBP</p>
+    <button type="button" class="btn" id="pick">Загрузить фото</button>
+  </label>
+
+  <div class="preview hidden" id="preview">
+    <img id="pimg" alt="">
+  </div>
+
+  <div id="status"></div>
+  <div id="result"></div>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const API = "/v1/search";
+const fileInput = $("#file");
+
+$("#pick").addEventListener("click", e => { e.preventDefault(); fileInput.click(); });
+$("#drop").addEventListener("click", e => { if(e.target.id!=="pick") fileInput.click(); });
+fileInput.addEventListener("change", () => { if(fileInput.files[0]) send(fileInput.files[0]); });
+
+const drop = $("#drop");
+["dragover","dragenter"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add("drag");}));
+["dragleave","drop"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove("drag");}));
+drop.addEventListener("drop",e=>{ const f=e.dataTransfer.files[0]; if(f) send(f); });
+
+function refImg(slug){
+  return `<img class="ph" src="/ref/${encodeURIComponent(slug)}" onerror="this.style.visibility='hidden'">`;
+}
+
+async function send(file){
+  // превью
+  $("#preview").classList.remove("hidden");
+  $("#pimg").src = URL.createObjectURL(file);
+  $("#status").innerHTML = '<div style="text-align:center;margin:18px"><span class="spin"></span></div>';
+  $("#result").innerHTML = "";
+  try{
+    const fd = new FormData(); fd.append("image", file);
+    const t0 = performance.now();
+    const r = await fetch(API, {method:"POST", body:fd});
+    const ms = Math.round(performance.now()-t0);
+    if(!r.ok) throw new Error("HTTP "+r.status);
+    render(await r.json(), ms);
+  }catch(err){
+    $("#status").innerHTML = `<div class="banner warn">Ошибка запроса: ${err.message}. Сервис запущен на :8080?</div>`;
+  }
+}
+
+function render(d, ms){
+  const c = d.top1?.card || {};
+  const inCat = d.in_catalog;
+  $("#status").innerHTML = inCat
+    ? `<div class="banner ok">✓ Вино найдено в каталоге</div>`
+    : `<div class="banner warn">⚠ Уверенности мало — возможно, вина нет в каталоге. Ближайшие варианты ниже.</div>`;
+
+  const conf = d.confidence || {};
+  const tags = [c.category,c.color,c.region,c.grape].filter(Boolean)
+      .map(t=>`<span class="tag">${esc(t)}</span>`).join("");
+  let html = `
+    <div class="card">
+      ${refImg(d.top1.slug)}
+      <div>
+        <h2>${esc(c.name||d.top1.slug)}</h2>
+        <div class="win">${esc(c.winery||"")}</div>
+        <div class="tags">${tags}</div>
+        <div class="desc">${esc((c.description||"").slice(0,320))}</div>
+        <div class="conf">Совпадение <b>${(d.top1.score*100).toFixed(1)}%</b> ·
+          отрыв от 2-го <b>${(conf.margin*100).toFixed(1)} п.п.</b> ·
+          slug <b>${esc(d.top1.slug)}</b> · ${ms} мс</div>
+      </div>
+    </div>`;
+
+  if(d.results && d.results.length>1){
+    html += `<h3 class="sec">Ещё похожие</h3>`;
+    d.results.slice(1).forEach((r,i)=>{
+      const rc = r.card||{};
+      const pct = (r.score*100).toFixed(0);
+      html += `
+        <div class="row">
+          <div class="rk">${i+2}</div>
+          <img src="/ref/${encodeURIComponent(r.slug)}" onerror="this.style.visibility='hidden'">
+          <div class="nm"><b>${esc(rc.name||r.slug)}</b><span>${esc(rc.winery||"")}</span></div>
+          <div class="bar"><div class="t"><div class="f" style="width:${pct}%"></div></div>
+            <div class="v">${pct}%</div></div>
+        </div>`;
+    });
+  }
+  $("#result").innerHTML = html;
+}
+function esc(s){return String(s).replace(/[&<>"]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[m]));}
+</script>
+</body>
+</html>

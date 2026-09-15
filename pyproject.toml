@@ -1,0 +1,34 @@
+[project]
+name = "svoe-vino-scanner"
+version = "0.1.0"
+description = "Сканер российских вин по фото этикетки (image retrieval, SigLIP2) — кейс РСХБ, ЛЦТ-2026"
+requires-python = ">=3.11"
+dependencies = [
+    # данные / EDA
+    "pandas>=2.2",
+    "numpy>=1.26",
+    "pillow>=10.3",
+    "tqdm>=4.66",
+    # CV / модель (torch по умолчанию CPU-сборка с PyPI; для GPU см. README)
+    "torch>=2.4",
+    "transformers>=4.45",
+    # скрейпинг
+    "httpx>=0.27",
+    "playwright>=1.45",
+    "imagehash>=4.3",
+    # сервис инференса
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    "python-multipart>=0.0.9",
+]
+
+[tool.uv]
+# Раскомментируй для GPU-сборки torch (CUDA 12.1):
+#   uv pip install torch --index-url https://download.pytorch.org/whl/cu121
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["solution"]
