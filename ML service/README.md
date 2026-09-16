@@ -1,4 +1,4 @@
-# service — инференс-сервис сканера
+# ML service — инференс-сервис сканера
 
 FastAPI-сервис: фото этикетки → карточка вина. Ядро — кроп бутылки (YOLO) → эмбеддинг
 (SigLIP 2) → косинусный поиск по индексу каталога (`index/catalog[_crop].npz`).
@@ -11,19 +11,27 @@ FastAPI-сервис: фото этикетки → карточка вина. �
 | `encoder.py` | SigLIP 2: картинка → L2-нормированный вектор (`get_encoder()`) |
 | `crop.py` | кроп бутылки (COCO-YOLO), env-выключатель `CROP_ENABLED` |
 | `search.py` | индекс в памяти + косинусный поиск + карточки (`CatalogIndex`) |
+| `build_index.py` | строит `index/catalog[_crop].npz` из `filtered/` (эмбеддинги + crop) |
 | `static/index.html` | мини-UI в стиле «Своё вино» |
-| `index/` | `catalog.npz` / `catalog_crop.npz` (+ meta) — строит `../eda_and_image_processing/process_images.py` |
+| `index/` | `catalog.npz` / `catalog_crop.npz` (+ meta) — строит `build_index.py` |
 
 ## Запуск
 
 ```bash
-cd service
+cd "ML service"
 HF_HUB_OFFLINE=1 uv run uvicorn app:app --host 127.0.0.1 --port 8080
 # открыть http://127.0.0.1:8080/
 ```
 
-Индекс должен быть построен заранее (`process_images.py`). Кроп в сервисе и в индексе
+Индекс должен быть построен заранее (`build_index.py`; эталоны готовит
+`../eda and image filtering/process_images.py`). Кроп в сервисе и в индексе
 обязан совпадать — управляется одним `CROP_ENABLED`.
+
+```bash
+cd "ML service"
+uv run python build_index.py            # crop по CROP_ENABLED (деф 1)
+uv run python build_index.py --both     # оба индекса (crop off + on)
+```
 
 ## Эндпоинты
 

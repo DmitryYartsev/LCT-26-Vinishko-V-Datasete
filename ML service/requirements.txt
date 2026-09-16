@@ -1,0 +1,12 @@
+fastapi
+uvicorn[standard]
+python-multipart
+pillow
+numpy
+pandas
+psycopg[binary]
+pgvector
+transformers
+ultralytics
+requests
+tqdm

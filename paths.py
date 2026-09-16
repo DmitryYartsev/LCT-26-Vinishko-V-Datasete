@@ -22,10 +22,10 @@ FILTERED = ROOT / "filtered"                          # <slug>/NN.webp — вс�
 CATALOG_CSV = FILTERED / "catalog.csv"                # инфа про slug (карточки + список фото)
 
 # --- индекс для сервиса (gitignore) ---
-INDEX_DIR = ROOT / "service" / "index"
+INDEX_DIR = ROOT / "ML service" / "index"
 
 # --- прочее ---
-SERVICE_DIR = ROOT / "service"
+SERVICE_DIR = ROOT / "ML service"
 EVAL_DIR = ROOT / "eval"                              # скрипт-оценщик + публичные query
 
 

@@ -1,0 +1,55 @@
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: vino
+      POSTGRES_PASSWORD: vino
+      POSTGRES_DB: vino
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vino"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    ports:
+      - "5432:5432"
+
+  ml:
+    build:
+      context: "./ML service"
+    environment:
+      DATABASE_URL: postgresql://vino:vino@db:5432/vino
+      SEARCH_MODEL: ${SEARCH_MODEL:-google/siglip2-base-patch16-256}
+      SEARCH_BACKEND: ${SEARCH_BACKEND:-local}
+      SEARCH_API_URL: ${SEARCH_API_URL:-}
+      SEARCH_API_TOKEN: ${SEARCH_API_TOKEN:-}
+      CROP_ENABLED: ${CROP_ENABLED:-1}
+      CROP_MODEL: ${CROP_MODEL:-yolo11n.pt}
+      THRESH_SCORE: ${THRESH_SCORE:-0.75}
+      THRESH_MARGIN: ${THRESH_MARGIN:-0.015}
+    volumes:
+      - "./paths.py:/app/paths.py:ro"
+      - "./ML service:/app/ml"
+      - "./filtered:/app/filtered:ro"
+      - "./models:/app/models"
+      - hfcache:/models_cache
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+
+  web:
+    build:
+      context: "./web"
+    environment:
+      ML_URL: http://ml:8080
+    depends_on:
+      - ml
+    ports:
+      - "3000:3000"
+
+volumes:
+  pgdata:
+  hfcache:

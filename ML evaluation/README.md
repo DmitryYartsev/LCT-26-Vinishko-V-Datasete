@@ -1,4 +1,4 @@
-# harness — валидация качества поиска
+# ML evaluation — валидация качества поиска
 
 Численно меряет качество retrieval на наборах query, чтобы сравнивать конфиги
 (кроп on/off, модель, OCR и т.д.), а не гадать по нескольким фото.
@@ -15,7 +15,7 @@
 ## Запуск
 
 ```bash
-cd harness
+cd "ML evaluation"
 uv run python build_queryset.py                                   # -> querysets/scrape.jsonl
 # сравнение кроп off vs on (индексы должны быть построены обоими):
 CROP_ENABLED=0 uv run python evaluate.py --queryset querysets/scrape.jsonl --tag scrape_base

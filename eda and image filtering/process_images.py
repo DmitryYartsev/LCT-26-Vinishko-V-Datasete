@@ -1,32 +1,25 @@
 # -*- coding: utf-8 -*-
-"""Обработка изображений: папка-дамп -> filtered/<slug>/*.webp + catalog.csv + npz-индекс.
+"""Фильтрация мусора: папка-дамп -> filtered/<slug>/*.webp + catalog.csv.
 
+Готовит эталоны для индекса — сам npz-индекс строит `../ML service/build_index.py`.
 Пайплайн (НЕ EDA — EDA лежит в eda.ipynb):
  1. снять size-варианты Strapi (thumbnail_/small_/medium_/large_ + оригинал) -> крупнейший;
  2. контент-дедуп по sha1;
  3. сопоставить изображения с вином (translit «Название фото» / slug), собрать ВСЕ фото на slug;
- 4. разложить в filtered/<slug>/NN.<ext>, записать filtered/catalog.csv (карточки + n_images);
- 5. построить индекс service/index/catalog[_crop].npz (по одному вектору на КАЖДОЕ фото,
-    параллельный массив slug — мультивектор; матч в сервисе = max cosine по slug).
+ 4. разложить в filtered/<slug>/NN.<ext>, записать filtered/catalog.csv (карточки + n_images).
 
 Запуск:
-  uv run python process_images.py                 # crop по CROP_ENABLED (деф 1) -> catalog_crop.npz
-  CROP_ENABLED=0 uv run python process_images.py   # -> catalog.npz
-  uv run python process_images.py --both           # оба индекса
-  uv run python process_images.py --no-index       # только filtered/ + catalog.csv
+  uv run python process_images.py                  # -> filtered/ + catalog.csv
+  uv run python process_images.py --uploads PATH    # свой каталог-дамп
 """
-import os, re, sys, json, hashlib, shutil, argparse
-os.environ.setdefault("HF_HUB_OFFLINE", "1")
+import re, sys, hashlib, shutil, argparse
 from pathlib import Path
 from collections import defaultdict
-import numpy as np
 import pandas as pd
-from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-sys.path.insert(0, str(ROOT / "service"))
-from paths import UPLOADS, FILTERED, CATALOG_CSV, CATALOG_SRC, INDEX_DIR, index_file, meta_file  # noqa
+from paths import UPLOADS, FILTERED, CATALOG_CSV, CATALOG_SRC  # noqa
 
 sys.stdout.reconfigure(encoding="utf-8", line_buffering=True)
 
@@ -116,50 +109,13 @@ def write_filtered(slug_photos, cards):
     print(f"catalog.csv -> {CATALOG_CSV}")
 
 
-def build_index(crop_flag):
-    os.environ["CROP_ENABLED"] = "1" if crop_flag else "0"
-    import importlib, crop as crop_mod, encoder as enc_mod
-    importlib.reload(crop_mod)                       # перечитать CROP_ENABLED
-    from tqdm import tqdm
-    enc = enc_mod.get_encoder()
-    # собрать (slug, path) по filtered/
-    pairs = []
-    for d in sorted(FILTERED.iterdir()):
-        if d.is_dir():
-            for img in sorted(d.iterdir()):
-                if img.suffix.lower() in IMG_EXT: pairs.append((d.name, img))
-    print(f"[index crop={crop_flag}] изображений: {len(pairs)}")
-    embs, B = [], 32
-    for i in tqdm(range(0, len(pairs), B), desc="embed"):
-        imgs = []
-        for _, p in pairs[i:i + B]:
-            im = Image.open(p).convert("RGB"); im, _ = crop_mod.maybe_crop(im); imgs.append(im)
-        embs.append(enc.embed(imgs))
-    E = np.concatenate(embs, axis=0)
-    slugs = np.array([s for s, _ in pairs])
-    INDEX_DIR.mkdir(parents=True, exist_ok=True)
-    np.savez(index_file(crop_flag), emb=E, slugs=slugs)
-    meta_file(crop_flag).write_text(json.dumps(
-        {"model": enc.model_name, "n_vectors": len(slugs), "n_wines": int(len(set(slugs))),
-         "dim": enc.dim, "crop": crop_flag}, ensure_ascii=False, indent=2), encoding="utf-8")
-    print(f"индекс {E.shape} ({len(set(slugs))} вин) -> {index_file(crop_flag).name}")
-
-
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--uploads", default=str(UPLOADS))
-    ap.add_argument("--no-index", action="store_true")
-    ap.add_argument("--both", action="store_true", help="построить оба индекса (crop off+on)")
     args = ap.parse_args()
 
     slug_photos, cards = dedup_and_match(Path(args.uploads))
     write_filtered(slug_photos, cards)
-    if args.no_index:
-        return
-    if args.both:
-        build_index(False); build_index(True)
-    else:
-        build_index(os.environ.get("CROP_ENABLED", "1") == "1")
 
 
 if __name__ == "__main__":

@@ -9,19 +9,28 @@ org_files/
 solution/
 raw_images/
 filtered/
-service/index/
+scraped_raw/
+ML service/index/
 models/
 _scratch/
+scraped_raw
 
-# генерируемое harness
-harness/querysets/
-harness/reports/
+# генерируемое ML evaluation
+ML evaluation/querysets/
+ML evaluation/reports/
 
 # eval-артефакты
 eval/predictions.jsonl
 **/__MACOSX/
 .ipynb_checkpoints/
 
+# web (Nuxt)
+web/node_modules/
+web/.nuxt/
+web/.output/
+
 # IDE
 .idea/
 .vscode/
+
+/scraped_raw.7z
