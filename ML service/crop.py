@@ -73,6 +73,65 @@ def maybe_crop(img: Image.Image):
         return img, None
     return get_cropper().crop(img)
 
+# ---------------------------------------------------------------- label crop
+# Кроп этикетки: YOLO-детектор этикеток (дообученный, data/test_labels_detector).
+# Запускается ПОВЕРХ бутылочного кропа. Используется второй веткой поиска:
+#   ветка A: эмбеддинг бутылочного кропа (индекс model)
+#   ветка B: эмбеддинг кропа этикетки   (индекс model#label)
+# итог — ветка с максимальным top-1 score (см. norm_exp/eval_pipelines.py: A vs B).
+USE_LABEL_BRANCH = os.environ.get("USE_LABEL_BRANCH", "1") == "1"
+LABEL_SUFFIX = "#label"      # суффикс модели-ветки этикетки в pgvector (model + LABEL_SUFFIX)
+LABEL_MODEL = os.environ.get("LABEL_MODEL", str(_MODELS / "label_det_best.pt"))
+LABEL_MIN_CONF = float(os.environ.get("LABEL_MIN_CONF", "0.2"))   # F1=0.99 @ 0.21
+LABEL_MARGIN = float(os.environ.get("LABEL_MARGIN", "0.02"))      # паддинг кропа этикетки
+
+
+class LabelCropper:
+    """Детектор этикетки на бутылочном кропе -> кроп этикетки (fallback: сам кроп бутылки)."""
+
+    def __init__(self, model_name: str = LABEL_MODEL):
+        from ultralytics import YOLO
+        self.model = YOLO(model_name)
+
+    def best_box(self, img: Image.Image):
+        """Максимально уверенный бокс этикетки или (None, 0.0)."""
+        res = self.model.predict(img, verbose=False, conf=LABEL_MIN_CONF, imgsz=640)
+        best, bc = None, -1.0
+        for r in res:
+            for b in r.boxes:
+                c = float(b.conf[0])
+                if c > bc:
+                    bc, best = c, [float(v) for v in b.xyxy[0].tolist()]
+        return best, bc
+
+    def crop(self, bottle_crop: Image.Image):
+        """-> (PIL, label_found: bool, conf). Без этикетки — вернёт вход, False."""
+        img = bottle_crop.convert("RGB")
+        W, H = img.size
+        box, conf = self.best_box(img)
+        if box is None:
+            return img, False, 0.0
+        x1, y1, x2, y2 = box
+        mx, my = (x2 - x1) * LABEL_MARGIN, (y2 - y1) * LABEL_MARGIN
+        return (img.crop((max(0, int(x1 - mx)), max(0, int(y1 - my)),
+                          min(W, int(x2 + mx)), min(H, int(y2 + my)))),
+                True, conf)
+
+
+_LCROPPER = None
+def get_label_cropper():
+    global _LCROPPER
+    if _LCROPPER is None:
+        _LCROPPER = LabelCropper()
+    return _LCROPPER
+
+
+def maybe_label_crop(bottle_crop: Image.Image):
+    """Кроп этикетки с учётом USE_LABEL_BRANCH. -> (PIL, detected|None)."""
+    if not USE_LABEL_BRANCH:
+        return bottle_crop, None
+    return get_label_cropper().crop(bottle_crop)
+
 
 if __name__ == "__main__":
     import sys, glob

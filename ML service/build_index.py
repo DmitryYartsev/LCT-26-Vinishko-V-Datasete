@@ -19,7 +19,7 @@ from paths import FILTERED, CATALOG_CSV
 import db
 import encoder as enc_mod
 from encoder import get_encoder
-from crop import maybe_crop
+from crop import maybe_crop, maybe_label_crop, USE_LABEL_BRANCH, LABEL_SUFFIX
 
 IMG_EXT = {".webp", ".png", ".jpg", ".jpeg", ".jfif", ".heic", ".tif", ".tiff"}
 
@@ -37,25 +37,44 @@ def _pairs():
 def warmup(force: bool = False):
     enc = get_encoder()
     model = enc.model_name
+    label_model = model + LABEL_SUFFIX          # вторая ветка: кроп этикетки
     dim = enc.embed([Image.new("RGB", (224, 224), "white")]).shape[1]
     conn = db.connect()
     # каталог
     cards = pd.read_csv(CATALOG_CSV, dtype=str, keep_default_na=False).to_dict("records")
     db.upsert_wines(conn, cards)
-    if db.has_vectors(conn, model) and not force:
-        print(f"[warmup] индекс модели '{model}' уже есть, пропускаю (dim={dim})")
+    need_a = force or not db.has_vectors(conn, model)
+    need_b = USE_LABEL_BRANCH and (force or not db.has_vectors(conn, label_model))
+    if not need_a and not need_b:
+        print(f"[warmup] индексы '{model}' и '{label_model}' уже есть, пропускаю (dim={dim})")
         return
     pairs = _pairs()
-    print(f"[warmup] эмбеддинг {len(pairs)} фото моделью '{model}' (dim={dim})")
-    vecs = []
+    what = " + ".join(x for x, y in (("бутылка", need_a), ("этикетка", need_b)) if y)
+    print(f"[warmup] эмбеддинг {len(pairs)} фото ({what}) моделью '{model}' (dim={dim})")
+    vecs_a, vecs_b = [], []
     B = 32
     for i in range(0, len(pairs), B):
-        imgs = [maybe_crop(Image.open(p).convert("RGB"))[0] for _, p in pairs[i:i + B]]
-        embs = enc.embed(imgs)
-        vecs.extend((pairs[i + j][0], embs[j]) for j in range(len(imgs)))
-        print(f"  {min(i + B, len(pairs))}/{len(pairs)}")
-    db.replace_vectors(conn, model, vecs, dim, enc_mod.BACKEND)
-    print(f"[warmup] залито {len(vecs)} векторов / {len(set(s for s, _ in vecs))} вин (model='{model}')")
+        chunk = pairs[i:i + B]
+        crops_a = [maybe_crop(Image.open(p).convert("RGB"))[0] for _, p in chunk]
+        # кроп этикетки поверх бутылочного; если этикетка не найдена — сам бутылочный кроп
+        crops_b = [maybe_label_crop(c)[0] if need_b else None for c in crops_a]
+        # энкодим одним батчем: [A-кропы..., B-кропы...]
+        emb = enc.embed(crops_a + crops_b, batch_size=B)
+        half = len(crops_a)
+        if need_a:
+            vecs_a.extend((chunk[j][0], emb[j]) for j in range(half))
+        if need_b:
+            vecs_b.extend((chunk[j][0], emb[half + j]) for j in range(half))
+        done = min(i + B, len(pairs))
+        if done % 256 == 0 or done == len(pairs):
+            print(f"  {done}/{len(pairs)}")
+    if need_a:
+        db.replace_vectors(conn, model, vecs_a, dim, enc_mod.BACKEND)
+        print(f"[warmup] ветка 'бутылка': {len(vecs_a)} векторов / {len(set(s for s, _ in vecs_a))} вин (model='{model}')")
+    if need_b:
+        db.replace_vectors(conn, label_model, vecs_b, dim, enc_mod.BACKEND)
+        print(f"[warmup] ветка 'этикетка': {len(vecs_b)} векторов / {len(set(s for s, _ in vecs_b))} вин (model='{label_model}')")
+
 
 
 if __name__ == "__main__":

@@ -25,7 +25,10 @@ services:
       SEARCH_API_URL: ${SEARCH_API_URL:-}
       SEARCH_API_TOKEN: ${SEARCH_API_TOKEN:-}
       CROP_ENABLED: ${CROP_ENABLED:-1}
-      CROP_MODEL: ${CROP_MODEL:-yolo11n.pt}
+      CROP_MODEL: ${CROP_MODEL:-/app/models/yolo11n.pt}
+      USE_LABEL_BRANCH: ${USE_LABEL_BRANCH:-1}
+      LABEL_MODEL: ${LABEL_MODEL:-/app/models/label_det_best.pt}
+      SEARCH_PIPELINE: ${SEARCH_PIPELINE:-combined}
       THRESH_SCORE: ${THRESH_SCORE:-0.75}
       THRESH_MARGIN: ${THRESH_MARGIN:-0.015}
     volumes:

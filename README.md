@@ -146,8 +146,12 @@ bash participant_test.sh --images-dir ./queries --manifest ./queries.tsv \
 | `SEARCH_API_URL` / `SEARCH_API_TOKEN` | — | адрес/токен инференс-эндпоинта для `remote` |
 | `DATABASE_URL` | `postgresql://vino:vino@db:5432/vino` | Postgres+pgvector |
 | `CROP_ENABLED` | `1` | кроп бутылки (YOLO); нормализация этикетки |
-| `CROP_MODEL` | `yolo11n.pt` | веса YOLO (скачиваются автоматически) |
+| `CROP_MODEL` | `/app/models/yolo11n.pt` | веса YOLO-детектора бутылки (в `models/`, в git не входят) |
 | `CROP_MARGIN` / `CROP_MIN_CONF` | `0.06` / `0.25` | паддинг вокруг бокса / порог детекции |
+| `USE_LABEL_BRANCH` | `1` | вторая ветка поиска: кроп этикетки (YOLO) -> индекс `model#label` |
+| `LABEL_MODEL` | `/app/models/label_det_best.pt` | веса детектора этикетки (дообученный YOLO, в `models/`) |
+| `LABEL_MIN_CONF` / `LABEL_MARGIN` | `0.2` / `0.02` | порог детекции этикетки / паддинг её кропа |
+| `SEARCH_PIPELINE` | `combined` | `combined` — обе ветки, ответ по макс. score; `bottle`/`label` — одна ветка |
 | `THRESH_SCORE` / `THRESH_MARGIN` | `0.75` / `0.015` | пороги флага `in_catalog` (черновые, калибровать) |
 | `EVAL_ABSTAIN` | `0` | `1` — отдавать `null` при низкой уверенности в eval-эндпоинте |
 | `HF_HUB_OFFLINE` | — | `1` — не ходить в HuggingFace (модель из кэша) |

@@ -1,10 +1,11 @@
-# окружение
 .venv/
 __pycache__/
 *.pyc
-*.pt
 
-# исходники организатора и большие/производные данные
+*.pt
+models/
+models/*.pt
+
 org_files/
 solution/
 raw_images/
@@ -15,22 +16,22 @@ models/
 _scratch/
 scraped_raw
 
-# генерируемое ML evaluation
 ML evaluation/querysets/
 ML evaluation/reports/
 
-# eval-артефакты
 eval/predictions.jsonl
 **/__MACOSX/
 .ipynb_checkpoints/
 
-# web (Nuxt)
 web/node_modules/
 web/.nuxt/
 web/.output/
 
-# IDE
 .idea/
 .vscode/
 
 /scraped_raw.7z
+
+.DS_Store
+.env
+eval/.DS_Store
