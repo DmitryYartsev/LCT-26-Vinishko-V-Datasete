@@ -49,6 +49,8 @@ uv run python build_index.py --both     # оба индекса (crop off + on)
 | ENV | Деф. | Смысл |
 |---|---|---|
 | `SIGLIP_MODEL` | `google/siglip2-base-patch16-256` | энкодер (GPU — `...so400m-patch16-384`) |
+| `SEARCH_ENCODER` | `auto` | `siglip` / `dinov2` / `auto` (по `SEARCH_MODEL`: есть `dinov2` → DINOv2) |
+| `SEARCH_MODEL` | `google/siglip2-base-patch16-256` | HF-id или локальный путь (`facebook/dinov2-base` / `/app/models/dinov2-base`) |
 | `CROP_ENABLED` | `1` | кроп бутылки; переключает и препроцесс, и файл индекса |
 | `CROP_MODEL` / `CROP_MARGIN` / `CROP_MIN_CONF` | `yolo11n.pt` / `0.06` / `0.25` | параметры кропа |
 | `THRESH_SCORE` / `THRESH_MARGIN` | `0.75` / `0.015` | пороги `in_catalog` (черновые, калибровать) |

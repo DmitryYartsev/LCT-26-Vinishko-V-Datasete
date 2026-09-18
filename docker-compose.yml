@@ -20,6 +20,7 @@ services:
       context: "./ML service"
     environment:
       DATABASE_URL: postgresql://vino:vino@db:5432/vino
+      SEARCH_ENCODER: ${SEARCH_ENCODER:-auto}
       SEARCH_MODEL: ${SEARCH_MODEL:-google/siglip2-base-patch16-256}
       SEARCH_BACKEND: ${SEARCH_BACKEND:-local}
       SEARCH_API_URL: ${SEARCH_API_URL:-}
