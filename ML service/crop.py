@@ -9,10 +9,15 @@ ENV:
   CROP_MODEL=yolo11n.pt  веса YOLO (скачиваются автоматически, ~6МБ)
   CROP_MARGIN=0.06       паддинг вокруг бокса (доля от размера бутылки)
   CROP_MIN_CONF=0.25     мин. уверенность детекции
+
+Постобработка этикетки (выравнивание по 4 углам, как в Adobe Scan) — отдельный
+модуль ``label_align.py``, включается `LABEL_ALIGN=1` (см. docstring модуля).
 """
 import os
 from pathlib import Path
 from PIL import Image
+
+from label_align import ALIGN_ENABLED, get_aligner      # постобработка: выравнивание этикетки
 
 # веса YOLO хранятся в одном месте (models/), чтобы не расползались по cwd
 _MODELS = Path(__file__).resolve().parents[1] / "models"
@@ -105,12 +110,23 @@ class LabelCropper:
         return best, bc
 
     def crop(self, bottle_crop: Image.Image):
-        """-> (PIL, label_found: bool, conf). Без этикетки — вернёт вход, False."""
+        """-> (PIL, label_found: bool, conf). Без этикетки — вернёт вход, False.
+
+        При ``LABEL_ALIGN=1`` bbox детектора проходит постобработку в
+        ``label_align``: этикетка выравнивается по своим 4 углам (rectify, как в
+        Adobe Scan). Важно: флаг влияет и на индекс (build_index), и на запрос —
+        препроцесс обязан совпадать.
+        """
         img = bottle_crop.convert("RGB")
         W, H = img.size
         box, conf = self.best_box(img)
         if box is None:
             return img, False, 0.0
+        if ALIGN_ENABLED:
+            try:
+                return get_aligner().align(img, box), True, conf
+            except Exception as e:            # noqa: BLE001 — не ронять пайплайн
+                print(f"[label_align] {e}; fallback на bbox-кроп", flush=True)
         x1, y1, x2, y2 = box
         mx, my = (x2 - x1) * LABEL_MARGIN, (y2 - y1) * LABEL_MARGIN
         return (img.crop((max(0, int(x1 - mx)), max(0, int(y1 - my)),

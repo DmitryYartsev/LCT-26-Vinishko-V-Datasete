@@ -9,5 +9,6 @@ pgvector
 transformers
 timm
 ultralytics
+opencv-python
 requests
 tqdm
