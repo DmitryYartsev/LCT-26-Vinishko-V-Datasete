@@ -28,8 +28,8 @@ INDEX_DIR = ROOT / "ML service" / "index"
 MODELS_DIR = ROOT / "models"                          # YOLO + локальная копия SigLIP 2
 SIGLIP_LOCAL = MODELS_DIR / "siglip2-base-patch16-256"  # HF-совместимая папка энкодера
 
-# --- дообучение энкодера: metric learning (ML train/) ---
-TRAIN_DIR = ROOT / "ML train"
+# --- дообучение энкодера: metric learning (ML train/metric_learning/) ---
+TRAIN_DIR = ROOT / "ML train" / "metric_learning"
 TRAIN_ARTIFACTS = TRAIN_DIR / "artifacts"             # чекпоинты/графики/отчёты (gitignore)
 TRAIN_DUMMY = TRAIN_DIR / "dummy_data"                # синтетика для смоук-теста (gitignore)
 
