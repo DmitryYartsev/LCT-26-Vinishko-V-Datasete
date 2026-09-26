@@ -19,6 +19,15 @@ from fastapi.responses import JSONResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+# --- конфиг пайплайна (OmegaConf) читается ДО импорта env-зависимых модулей ---
+from pipeline_config import load_config, apply_retrieval_env
+import ocr_rerank
+
+_cfg = load_config()
+apply_retrieval_env(_cfg)
+
 from paths import FILTERED
 import db
 from encoder import get_encoder
@@ -29,20 +38,25 @@ from build_index import warmup
 THRESH_SCORE = float(os.environ.get("THRESH_SCORE", "0.75"))
 THRESH_MARGIN = float(os.environ.get("THRESH_MARGIN", "0.015"))
 # SEARCH_PIPELINE: combined = бутылка + этикетка (макс. score), bottle = только бутылка,
-# label = только этикетка. Отбор ветки — по максимальному top-1 score (см. norm_exp).
+# label = только этикетка. Отбор ветки — по максимальному top-1 score.
 SEARCH_PIPELINE = os.environ.get("SEARCH_PIPELINE", "combined").lower()
 EVAL_ABSTAIN = os.environ.get("EVAL_ABSTAIN", "0") == "1"
 STATIC = Path(__file__).parent / "static"
 
-app = FastAPI(title="Своё Вино — сканер", version="0.2.0")
+app = FastAPI(title="Своё Вино — сканер", version="0.3.0")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 _enc = None
 _conn = None
+# OCR-rerank (строится в startup, если ocr.enabled)
+_ocr_enabled = bool(_cfg.ocr.enabled)
+_ocr_extractor = None
+_ocr_matcher = None
+_ocr_verifier = None
 
 
 @app.on_event("startup")
 def _load():
-    global _enc, _conn
+    global _enc, _conn, _ocr_extractor, _ocr_matcher, _ocr_verifier
     t = time.time()
     warmup()
     _enc = get_encoder()
@@ -51,7 +65,22 @@ def _load():
         from crop import get_cropper; get_cropper()
     if USE_LABEL_BRANCH:
         get_label_cropper()
-    print(f"[startup] готово за {time.time()-t:.1f}с (pipeline={SEARCH_PIPELINE})")
+    if _ocr_enabled:
+        _ocr_extractor = ocr_rerank.OcrExtractor(_cfg)
+        _ocr_matcher = ocr_rerank.CsvMatcher(_cfg)
+        crop_fn = None
+        if _cfg.visual.enabled:
+            from crop import maybe_crop as _mc, maybe_label_crop as _mlc
+
+            def _ref_crop(img):
+                bottle, _ = _mc(img)
+                label, found, _ = _mlc(bottle)
+                return label if found else bottle
+
+            crop_fn = _ref_crop
+        _ocr_verifier = ocr_rerank.VisualVerifier(_cfg, _enc.embed, crop_fn)
+        print(f"[startup] OCR-rerank: model={_cfg.ocr.model}, refs={len(_ocr_matcher.entries)}")
+    print(f"[startup] готово за {time.time()-t:.1f}с (pipeline={SEARCH_PIPELINE}, ocr={_ocr_enabled})")
 
 
 def _read_image(raw: bytes) -> Image.Image:
@@ -71,6 +100,8 @@ def _rank(img: Image.Image, k: int = 5):
     label, found, _ = maybe_label_crop(bottle)
     if want_b and not found and USE_LABEL_BRANCH:
         label = bottle                                # этикетка не найдена — fallback на бутылку
+    _rank.bottle = bottle
+    _rank.label = label
     res_a = db.search(_conn, _enc.embed([bottle])[0], model, k=k) if want_a else None
     res_b = db.search(_conn, _enc.embed([label])[0], model + LABEL_SUFFIX, k=k) if want_b else None
     if res_a is None:
@@ -93,24 +124,48 @@ def _rank(img: Image.Image, k: int = 5):
     return res, top1, margin, in_catalog
 
 
+def _rerank(img: Image.Image, pre_ocr_slug, pre_ocr_score) -> dict:
+    """OCR-rerank поверх retrieval-ответа (см. ocr_rerank.rerank)."""
+    if not _ocr_enabled:
+        return {"final_slug": pre_ocr_slug, "stage": "retrieval", "reason": "ocr_disabled"}
+    return ocr_rerank.rerank(_cfg, img, getattr(_rank, "label", img),
+                             pre_ocr_slug, pre_ocr_score,
+                             _ocr_extractor, _ocr_matcher, _ocr_verifier)
+
+
 @app.post("/v1/eval/predict")
 async def eval_predict(image: UploadFile = File(...)):
-    res, top1, margin, in_catalog = _rank(_read_image(await image.read()))
+    img = _read_image(await image.read())
+    res, top1, margin, in_catalog = _rank(img)
+    pre_ocr_slug = res[0]["slug"] if res else None
+    rr = _rerank(img, pre_ocr_slug, top1)
+    final_slug = rr["final_slug"]
     if EVAL_ABSTAIN and not in_catalog:
         return JSONResponse({"slug": None})
-    return JSONResponse({"slug": res[0]["slug"] if res else None, "score": top1,
-                         "margin": margin, "branch": getattr(_rank, "branch", None)})
+    return JSONResponse({"slug": final_slug, "score": top1,
+                         "margin": margin, "branch": getattr(_rank, "branch", None),
+                         "stage": rr["stage"], "pre_ocr_slug": pre_ocr_slug,
+                         "csv_confidence": rr.get("csv_confidence"),
+                         "visual_similarity": rr.get("visual_similarity")})
 
 
 @app.post("/v1/search")
 async def search(image: UploadFile = File(...)):
-    res, top1, margin, in_catalog = _rank(_read_image(await image.read()))
+    img = _read_image(await image.read())
+    res, top1, margin, in_catalog = _rank(img)
+    pre_ocr_slug = res[0]["slug"] if res else None
+    rr = _rerank(img, pre_ocr_slug, top1)
     return {"in_catalog": in_catalog,
             "pipeline": SEARCH_PIPELINE, "branch": getattr(_rank, "branch", None),
             "branches": getattr(_rank, "branches", None),
             "confidence": {"top1_score": top1, "margin": margin,
                            "thresholds": {"score": THRESH_SCORE, "margin": THRESH_MARGIN}},
-            "top1": res[0] if res else None, "results": res}
+            "top1": res[0] if res else None, "results": res,
+            "final_slug": rr["final_slug"], "stage": rr["stage"],
+            "pre_ocr_slug": pre_ocr_slug,
+            "csv_confidence": rr.get("csv_confidence"),
+            "visual_similarity": rr.get("visual_similarity"),
+            "ocr_fields": rr.get("ocr_fields")}
 
 
 @app.get("/wine/{slug}")
@@ -138,6 +193,8 @@ def health():
             "crop": CROP_ENABLED,
             "pipeline": SEARCH_PIPELINE,
             "label_branch": USE_LABEL_BRANCH,
+            "ocr_rerank": _ocr_enabled,
+            "ocr_model": str(_cfg.ocr.model) if _ocr_enabled else None,
             "models": db.list_models(_conn) if _conn else []}
 
 

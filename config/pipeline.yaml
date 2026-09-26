@@ -1,0 +1,84 @@
+# Полный конфиг пайплайна предсказаний вина:
+#   1) image retrieval (текущая версия, SigLIP2 + YOLO-кроп + pgvector);
+#   2) OCR-rerank (внешняя модель gpt-4o-mini -> параметры этикетки -> самописный
+#      мэтчинг по референсному CSV -> визуальная проверка фото каталога).
+#
+# Все параметры читаются кодом через OmegaConf (OmegaConf.load(path)).
+# Внутри YAML допустима интерполяция ${paths.xxx}.
+
+paths:
+  # В Docker эти пути монтируются docker-compose.yml (см. volumes). Для запуска на
+  # хосте замените на абсолютные пути рабочей станции.
+  prompt_file: /app/prompts_wine_match.txt
+  reference_csv: /app/ref/found_in_catalog_corrected.csv
+  start_photos: /app/ref/start_photos
+  models_dir: /app/models
+
+# ---------------------------------------------------------------- retrieval (текущая версия пайплайна)
+retrieval:
+  model: ${paths.models_dir}/siglip2-base-patch16-256   # путь ЗАГРУЗКИ энкодера
+  index_model: /app/models/siglip2-base-patch16-256     # ключ модели в pgvector
+  encoder: auto                  # auto | siglip | dinov2
+  backend: local                 # local | remote
+  api_url: ""                    # для backend=remote
+  api_token: ""
+
+  crop_enabled: true
+  crop_model: ${paths.models_dir}/yolo11n.pt
+  crop_margin: 0.06
+  crop_min_conf: 0.25
+
+  label_enabled: true            # USE_LABEL_BRANCH
+  label_model: ${paths.models_dir}/label_det_best.pt
+  label_min_conf: 0.2
+  label_margin: 0.02
+  label_align: false             # LABEL_ALIGN (rectify по 4 углам этикетки)
+
+  pipeline: combined             # combined | bottle | label
+  thresh_score: 0.75
+  thresh_margin: 0.015
+  eval_abstain: false
+  top_k: 5
+
+  # локальный прогон на хосте: postgresql://vino:vino@127.0.0.1:5432/vino
+  database_url: postgresql://vino:vino@db:5432/vino
+
+# ---------------------------------------------------------------- OCR (внешняя модель, 1 вызов на фото)
+ocr:
+  enabled: true
+  model: openai/gpt-4o-mini
+  api_key_env: OPENROUTER_API_KEY
+  api_url: https://openrouter.ai/api/v1/chat/completions
+  temperature: 0.0
+  max_tokens: 700
+  timeout: 120
+  retries: 3
+  min_confidence: 0.5            # ниже этого OCR-мэтч не рассматриваем вообще
+
+# ---------------------------------------------------------------- самописный мэтчинг по параметрам
+csv_match:
+  # веса по убыванию важности: винодельня > категория > сорт > год > доп.текст
+  weights:
+    winery: 0.35
+    category: 0.25
+    grape: 0.25
+    year: 0.08
+    additional_text: 0.07
+  token_thresh: 0.72             # fuzzy-порог покрытия токена
+  # год учитывается ТОЛЬКО когда в базе есть одно и то же вино разных годов
+  # (разные слаг-суффиксы у одной основы, напр. <base>-15 vs <base>-155)
+  year_only_if_vintage_conflict: true
+  min_score: 0.35                # ниже — OCR-мэтч не засчитываем
+
+# ---------------------------------------------------------------- визуальная проверка
+visual:
+  enabled: true
+  min_similarity: 0.78           # косинус SigLIP2: запрос vs фото каталога (start_photos)
+  # OCR-мэтч принимаем только если csv_conf > retrieval_score + confidence_margin
+  confidence_margin: 0.0
+
+# ---------------------------------------------------------------- вывод
+output:
+  eval_csv: /Users/anaidashaginian/Obsidian/Obsidian/lct_2026_wine/data/real_data_with_slug_eval.csv
+  images_dir: /Users/anaidashaginian/Obsidian/Obsidian/lct_2026_wine/data/Реальные фото
+  out_dir: /Users/anaidashaginian/Obsidian/Obsidian/lct_2026_wine/scripts/reports

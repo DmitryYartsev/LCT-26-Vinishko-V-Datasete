@@ -32,11 +32,17 @@ services:
       SEARCH_PIPELINE: ${SEARCH_PIPELINE:-combined}
       THRESH_SCORE: ${THRESH_SCORE:-0.75}
       THRESH_MARGIN: ${THRESH_MARGIN:-0.015}
+      # OCR-rerank
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      PIPELINE_CONFIG: /app/config/pipeline.yaml
     volumes:
       - "./paths.py:/app/paths.py:ro"
       - "./ML service:/app/ml"
       - "./filtered:/app/filtered:ro"
       - "./models:/app/models"
+      - "./config:/app/config:ro"
+      - "../data/found_in_catalog_reference:/app/ref:ro"
+      - "../code/prompts_wine_match.txt:/app/prompts_wine_match.txt:ro"
       - hfcache:/models_cache
     depends_on:
       db:

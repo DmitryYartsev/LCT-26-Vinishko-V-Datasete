@@ -19,6 +19,9 @@ scraped_raw
 ML evaluation/querysets/
 ML evaluation/reports/
 
+ML train/dummy_data/
+ML train/artifacts/
+
 eval/predictions.jsonl
 **/__MACOSX/
 .ipynb_checkpoints/
@@ -35,3 +38,4 @@ web/.output/
 .DS_Store
 .env
 eval/.DS_Store
+ML train/

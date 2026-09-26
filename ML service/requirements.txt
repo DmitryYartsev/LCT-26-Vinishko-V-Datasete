@@ -12,3 +12,4 @@ ultralytics
 opencv-python
 requests
 tqdm
+omegaconf

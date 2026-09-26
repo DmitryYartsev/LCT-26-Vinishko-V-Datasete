@@ -24,6 +24,15 @@ CATALOG_CSV = FILTERED / "catalog.csv"                # инфа про slug (к
 # --- индекс для сервиса (gitignore) ---
 INDEX_DIR = ROOT / "ML service" / "index"
 
+# --- веса моделей (gitignore) ---
+MODELS_DIR = ROOT / "models"                          # YOLO + локальная копия SigLIP 2
+SIGLIP_LOCAL = MODELS_DIR / "siglip2-base-patch16-256"  # HF-совместимая папка энкодера
+
+# --- дообучение энкодера: metric learning (ML train/) ---
+TRAIN_DIR = ROOT / "ML train"
+TRAIN_ARTIFACTS = TRAIN_DIR / "artifacts"             # чекпоинты/графики/отчёты (gitignore)
+TRAIN_DUMMY = TRAIN_DIR / "dummy_data"                # синтетика для смоук-теста (gitignore)
+
 # --- прочее ---
 SERVICE_DIR = ROOT / "ML service"
 EVAL_DIR = ROOT / "eval"                              # скрипт-оценщик + публичные query
