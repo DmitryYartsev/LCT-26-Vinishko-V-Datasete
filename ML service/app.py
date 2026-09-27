@@ -12,10 +12,11 @@
 Модели и пороги — через env (см. README).
 """
 import os, io, sys, time
+from functools import lru_cache
 from pathlib import Path
 from PIL import Image
 from fastapi import FastAPI, File, UploadFile, HTTPException
-from fastapi.responses import JSONResponse, FileResponse
+from fastapi.responses import JSONResponse, FileResponse, Response
 from fastapi.middleware.cors import CORSMiddleware
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -76,8 +77,9 @@ async def eval_predict(image: UploadFile = File(...)):
 
 @app.post("/v1/search")
 async def search(image: UploadFile = File(...)):
+    t = time.perf_counter()
     res, top1, margin, in_catalog = _rank(_read_image(await image.read()))
-    return {"in_catalog": in_catalog,
+    return {"in_catalog": in_catalog, "elapsed_ms": round(1000 * (time.perf_counter() - t)),
             "confidence": {"top1_score": top1, "margin": margin,
                            "thresholds": {"score": THRESH_SCORE, "margin": THRESH_MARGIN}},
             "top1": res[0] if res else None, "results": res}
@@ -91,12 +93,24 @@ def wine(slug: str):
     return card
 
 
+@lru_cache(maxsize=512)
+def _thumb(path: str, h: int) -> bytes:
+    img = Image.open(path)
+    img.thumbnail((h * 2, h))                       # по высоте: бутылки вытянуты вертикально
+    buf = io.BytesIO()
+    img.save(buf, "WEBP", quality=85)
+    return buf.getvalue()
+
+
 @app.get("/ref/{slug}")
-def ref_image(slug: str):
+def ref_image(slug: str, h: int | None = None):
+    """Эталонное фото вина. `h` — превью заданной высоты (для UI: оригиналы бывают по 2-3 тыс. px)."""
     d = FILTERED / slug
     if d.is_dir():
         imgs = sorted(p for p in d.iterdir() if p.is_file())
         if imgs:
+            if h:
+                return Response(_thumb(str(imgs[0]), max(64, min(h, 1600))), media_type="image/webp")
             return FileResponse(imgs[0])
     raise HTTPException(status_code=404, detail="no image")
 
@@ -106,6 +120,7 @@ def health():
     return {"status": "ok",
             "model": _enc.model_name if _enc else None,
             "crop": CROP_ENABLED,
+            "wines": db.count_wines(_conn) if _conn else 0,
             "models": db.list_models(_conn) if _conn else []}
 
 

@@ -26,7 +26,12 @@ INDEX_DIR = ROOT / "ML service" / "index"
 
 # --- прочее ---
 SERVICE_DIR = ROOT / "ML service"
+SOMMELIER_DIR = ROOT / "sommelier service"
 EVAL_DIR = ROOT / "eval"                              # скрипт-оценщик + публичные query
+
+# --- атрибуты вин с vino-svoe.ru (блюда/крепость/подача; вход сомелье, в git) ---
+WINES_PARSED = SOMMELIER_DIR / "wines_parsed.jsonl"   # карточки сайта (по site-slug)
+WINES_SLUG_MAP = SOMMELIER_DIR / "slug_map.csv"       # slug каталога -> site_slug (+ метод/score матча)
 
 
 def index_file(crop: bool) -> Path:

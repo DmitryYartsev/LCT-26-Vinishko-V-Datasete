@@ -74,6 +74,10 @@ def get_card(conn, slug: str) -> dict:
     return dict(zip(CARD_FIELDS, r)) if r else {"slug": slug}
 
 
+def count_wines(conn) -> int:
+    return conn.execute("SELECT count(*) FROM wines").fetchone()[0]
+
+
 def list_models(conn):
     rows = conn.execute("SELECT model,dim,backend,n_vectors,built_at FROM models ORDER BY built_at DESC").fetchall()
     return [{"model": m, "dim": d, "backend": b, "n_vectors": n, "built_at": str(t)} for m, d, b, n, t in rows]
