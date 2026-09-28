@@ -56,12 +56,8 @@
   (`crop.use_query_policy()`), кропы эталонов всегда под `index_policy()`. Даёт
   recall@1 0.677 → 0.758 без пересборки индекса.
 - **Потолок ре-ранка** (P0): recall@30 визуального пула = 87.6%, 12.4% фото правильный slug
-  не попадает даже в top-30 → добавлен **полнокаталожный текстовый путь**
-  (`ML service/text_retrieval.py`: CsvMatcher + multilingual-e5) и **fusion-ранкер**
-  (`ML service/rerank_fusion.py`) над объединённым пулом image+text. Union поднимает потолок
-  до ~94%; ранкер включается флагом `fusion.enabled` и калибруется офлайн
-  (`ML evaluation/train_fusion.py`). Метрики и харнесс — в `ML evaluation/` (`recall_at_k.py`,
-  `union_text_eval.py`, `audit_refs.py`).
+  не попадает даже в top-30. Метрики и харнесс — в `ML evaluation/` (`recall_at_k.py`,
+  `audit_refs.py`).
 - **Метрики**: F1/recall меряются офлайн в `ML evaluation/evaluate.py` (HTTP к `ml`); в API отдаём `score`+`margin` как уверенность top-1/top-5.
 - **Сомелье stateless**: история чата и профиль живут на клиенте, в каждом запросе уходят целиком
   (в LLM — последние `HISTORY_TURNS` реплик + профиль как сжатое состояние). На сервере только логи.

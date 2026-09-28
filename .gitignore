@@ -18,7 +18,6 @@ scraped_raw
 
 ML evaluation/querysets/
 ML evaluation/reports/
-ML service/fusion_weights.json
 
 ML train/dummy_data/
 ML train/artifacts/

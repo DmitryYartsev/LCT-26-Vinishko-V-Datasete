@@ -135,21 +135,6 @@ def make_label_crop_fn():
     return crop_fn
 
 
-def build_fusion(cfg, matcher):
-    """FusionReranker (P0-3) либо None (``fusion.enabled=false`` — прежний гейт)."""
-    if not (getattr(cfg, 'fusion', None) is not None and bool(getattr(cfg.fusion, 'enabled', False))):
-        return None
-    import rerank_fusion
-    import text_retrieval
-    from paths import FUSION_WEIGHTS
-    tr = text_retrieval.TextRetriever(cfg, use_e5=bool(getattr(cfg.text, 'use_e5', True))) \
-        if getattr(cfg, 'text', None) is not None else None
-    wpath = str(getattr(cfg.fusion, 'weights_file', FUSION_WEIGHTS))
-    if wpath.startswith('/app/'):                    # docker-путь на хосте недоступен
-        wpath = str(FUSION_WEIGHTS)
-    return rerank_fusion.FusionReranker(cfg, matcher, tr, wpath)
-
-
 def build_ocr_components(cfg, enc):
     import ocr_rerank as ocr
 
@@ -157,11 +142,10 @@ def build_ocr_components(cfg, enc):
     matcher = ocr.CsvMatcher(cfg)
     crop_fn = make_label_crop_fn() if cfg.visual.enabled else None
     verifier = ocr.VisualVerifier(cfg, enc.embed, crop_fn)
-    fusion = build_fusion(cfg, matcher)
-    return extractor, matcher, verifier, fusion
+    return extractor, matcher, verifier
 
 
-def predict_one(cfg, img_path, rank, enc, extractor, matcher, verifier, fusion=None):
+def predict_one(cfg, img_path, rank, enc, extractor, matcher, verifier):
     img = Image.open(img_path).convert('RGB')
     res, bottle, label = rank(img)
     pre_ocr_slug = res[0]['slug'] if res else None
@@ -178,22 +162,6 @@ def predict_one(cfg, img_path, rank, enc, extractor, matcher, verifier, fusion=N
                             extractor, matcher, verifier, ocr_image=ocr_crop,
                             pre_ocr_candidates=[r['slug'] for r in (res or [])],
                             bottle_crop=bottle)
-    if fusion is not None and out.get('ocr_fields'):
-        # fusion работает поверх union-пула (image top-K + текст) на уже
-        # извлечённых полях — повторный вызов VLM не нужен.
-        try:
-            fr = fusion.rerank(out['ocr_fields'],
-                               [{'slug': r['slug'], 'score': r['score']} for r in (res or [])],
-                               query_crop=label, verifier=verifier,
-                               image_k=int(getattr(cfg.fusion, 'image_k', 30)),
-                               text_k=int(getattr(cfg.fusion, 'text_k', 10)))
-            if fr.get('final_slug'):
-                out['final_slug'] = fr['final_slug']
-                out['stage'] = 'fusion'
-                out['fusion_pool_size'] = fr.get('pool_size')
-                out['fusion_top_candidates'] = fr.get('top_candidates')
-        except Exception as e:  # noqa: BLE001 — fusion не должен ронять прогон
-            print(f'[fusion] {e}', flush=True)
     out['top5_retrieval'] = [{'slug': r['slug'], 'score': r['score']} for r in (res or [])]
     return out
 
@@ -238,7 +206,7 @@ def read_eval_rows(eval_csv: Path) -> list:
     return rows
 
 
-def run_eval(cfg, rank, enc, extractor, matcher, verifier, args, fusion=None):
+def run_eval(cfg, rank, enc, extractor, matcher, verifier, args):
     eval_csv = Path(args.eval_csv)
     images_dir = Path(args.images_dir)
     out_dir = Path(args.out_dir) if args.out_dir else Path(cfg.output.out_dir)
@@ -278,7 +246,7 @@ def run_eval(cfg, rank, enc, extractor, matcher, verifier, args, fusion=None):
                           'pre_ocr_score': None, 'csv_confidence': None,
                           'visual_similarity': None})
             continue
-        r = predict_one(cfg, img_path, rank, enc, extractor, matcher, verifier, fusion)
+        r = predict_one(cfg, img_path, rank, enc, extractor, matcher, verifier)
         pre = r['pre_ocr_slug']
         fin = r['final_slug']
         if r.get('ocr_error'):
@@ -340,7 +308,6 @@ def run_eval(cfg, rank, enc, extractor, matcher, verifier, args, fusion=None):
                         p.get('ocr_error')])
     print('отчёт ->', out_dir)
     return report
-    return report
 
 
 def main(argv=None) -> int:
@@ -369,10 +336,10 @@ def main(argv=None) -> int:
         return 1
 
     rank, enc, conn = build_rank(cfg)
-    extractor, matcher, verifier, fusion = build_ocr_components(cfg, enc)
+    extractor, matcher, verifier = build_ocr_components(cfg, enc)
 
     if args.image:
-        r = predict_one(cfg, Path(args.image), rank, enc, extractor, matcher, verifier, fusion)
+        r = predict_one(cfg, Path(args.image), rank, enc, extractor, matcher, verifier)
         print(json.dumps(r, ensure_ascii=False, indent=2))
         return 0
 
@@ -380,7 +347,7 @@ def main(argv=None) -> int:
         images_dir = args.images_dir or str(cfg.output.images_dir)
         run_eval(cfg, rank, enc, extractor, matcher, verifier, argparse.Namespace(
             eval_csv=args.eval_csv, images_dir=images_dir,
-            out_dir=args.out_dir, limit=args.limit), fusion)
+            out_dir=args.out_dir, limit=args.limit))
         return 0
 
     ap.print_help()

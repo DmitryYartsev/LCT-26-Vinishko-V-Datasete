@@ -12,10 +12,8 @@
 | `analyze_ocr_eval.py` | метрики прогона OCR-rerank по `ocr_rerank_report.json` → `OCR_report_run.md` |
 | `replay_ocr.py` | офлайн-калибровка весов/гейта OCR-rerank БЕЗ вызовов VLM (replay по сохранённым полям) |
 | `recall_at_k.py` | **P0-0**: recall@K + brand-recall + срез near-dup/singleton; кэш image top-K |
-| `union_text_eval.py` | **P0-2**: покрытие union-пула (image top-K ∪ text top-T) — потолок ре-ранка |
-| `train_fusion.py` | **P0-3**: обучение fusion-ранкера (2-fold CV, hill-climb) → `ML service/fusion_weights.json` |
 | `audit_refs.py` | **P0-1**: аудит эталонов (фото) и разметки (OCR winery ⟷ карточка) |
-| `selftest_p0.py` | самопроверки P0-модулей (без сети/VLM) |
+| `selftest_p0.py` | самопроверки парсинга ответа VLM (без сети/VLM) |
 | `encoder_ab.py` | A/B энкодеров по recall@K (один каталог/препроцесс): SigLIP2 vs OpenRouter-эмбеддинги |
 | `querysets/` | наборы `{query_id, image_path, true_slug, source, in_catalog}` |
 | `reports/` | результаты прогонов |
@@ -96,6 +94,9 @@ python3 replay_ocr.py --sweep               # сетка pool x margin
 **качество извлечения полей**: год прочитан лишь в 24/55 ошибок, `year_match`
 в оракуле по одному признаку чинит 0/51. Отсюда P0-4 (сильнее VLM/кроп).
 
+> Текстовый путь (e5) и fusion-ранкер так и не были включены в прод (`fusion.enabled: false`,
+> веса не сданы) и удалены из кода; строки таблицы про них — исторический эксперимент.
+
 **Обновление (отчёты 15–18):** числа выше — записанный baseline до правки кропа запроса.
 С политикой `query_crop_*` (включена в `config/pipeline.yaml`, индекс не пересобирается)
 на тех же 233 фото: recall@1 0.7253 → **0.7511**, recall@30 0.8755 → **0.9013**,
@@ -106,10 +107,8 @@ exact-slug 0.7097 → **0.7903** (`reports/17_recall_233_query_policy.md`,
 ```bash
 cd "ML evaluation"
 python3 recall_at_k.py       # -> reports/{recall_at_k.json,image_topk.json}
-python3 union_text_eval.py   # -> reports/union_text_eval.json
-python3 train_fusion.py      # -> reports/fusion.json + ML service/fusion_weights.json
 python3 audit_refs.py        # -> reports/audit_refs{,_suspicious}.{json,csv}
-python3 selftest_p0.py       # 23 проверки
+python3 selftest_p0.py       # 5 проверок
 ```
 
 ## Метрики

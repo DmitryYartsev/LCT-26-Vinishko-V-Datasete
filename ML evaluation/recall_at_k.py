@@ -3,8 +3,7 @@
 
 Зачем: accuracy top-1 (0.72) скрывает, ЧТО именно теряется. Здесь измеряем
 recall@K, brand-recall (винодельня) и разбивку по «серийным» (near-dup) винам,
-а также кэшируем image top-K со score — это вход для union-пула и fusion-ранкера
-(``union_text_eval.py``, ``train_fusion.py``).
+а также кэшируем image top-K со score.
 
 Прогон — реальный (encoder + YOLO + pgvector), как в проде:
     python3 recall_at_k.py                 # 233 фото, k=60
@@ -12,7 +11,7 @@ recall@K, brand-recall (винодельня) и разбивку по «сер�
 
 Артефакты (внутри репо):
   * ``reports/recall_at_k.json`` / ``.md`` — метрики;
-  * ``reports/image_topk.json``            — кэш top-K (обе ветки) для fusion.
+  * ``reports/image_topk.json``            — кэш top-K (обе ветки).
 """
 from __future__ import annotations
 

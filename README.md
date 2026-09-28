@@ -235,9 +235,7 @@ bash participant_test.sh --images-dir ./queries --manifest ./queries.tsv \
 - [x] Кроп бутылки (`crop.py`, COCO-YOLO) с env-выключателем — изолирует бутылку от фона/соседей
 - [x] **OCR-реранк near-dups**: VLM (`gpt-4o-mini`) читает ВЫПРЯМЛЕННЫЙ кроп этикетки →
   самописный мэтч по CSV (год/цвет/тип как дискриминаторы) → гейт по разрыву CSV top1↔top2
-- [x] **P0: recall-харнесс + union-пул + fusion-ранкер** (`ML evaluation/`, `ML service/text_retrieval.py`,
-  `rerank_fusion.py`): recall@K показал потолок image-ретривера (~88%); полнокаталожный
-  текстовый путь поднимает потолок пула до ~94%; калиброванный fusion (`fusion.enabled`)
+- [x] **P0: recall-харнесс** (`ML evaluation/`): recall@K показал потолок image-ретривера (~88%)
 - [ ] **P0-4: извлечение полей** (сильнее VLM/hi-res кроп: год/цвет) → дорога к 90%+
 - [ ] **Валидация (ML evaluation)** (синтетика + студийные held-out + out-of-catalog негативы) → F1 top-1/top-5 ← следующее
 - [ ] so400m + разрешение 384/512 на GPU (различение near-dups)

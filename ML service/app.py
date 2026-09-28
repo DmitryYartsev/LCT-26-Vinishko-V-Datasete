@@ -59,12 +59,11 @@ _ocr_enabled = bool(_cfg.ocr.enabled)
 _ocr_extractor = None
 _ocr_matcher = None
 _ocr_verifier = None
-_fusion = None
 
 
 @app.on_event("startup")
 def _load():
-    global _enc, _conn, _ocr_extractor, _ocr_matcher, _ocr_verifier, _fusion
+    global _enc, _conn, _ocr_extractor, _ocr_matcher, _ocr_verifier
     t = time.time()
     if preflight.check(_cfg, where='контейнер ml'):     # понятное сообщение, а не traceback
         raise SystemExit(3)
@@ -92,10 +91,6 @@ def _load():
             crop_fn = _ref_crop
         _ocr_verifier = ocr_rerank.VisualVerifier(_cfg, _enc.embed, crop_fn)
         print(f"[startup] OCR-rerank: model={_cfg.ocr.model}, refs={len(_ocr_matcher.entries)}")
-        if getattr(_cfg, 'fusion', None) is not None and bool(_cfg.fusion.get('enabled', False)):
-            from pipeline import build_fusion
-            _fusion = build_fusion(_cfg, _ocr_matcher)
-            print(f"[startup] fusion-rerank: {'on' if _fusion else 'off'}")
     print(f"[startup] готово за {time.time()-t:.1f}с (pipeline={SEARCH_PIPELINE}, ocr={_ocr_enabled})")
 
 
@@ -160,29 +155,12 @@ def _rerank(img: Image.Image, pre_ocr_slug, pre_ocr_score) -> dict:
                 ocr_crop, _ = ocr_label_crop(bottle)
             except Exception as e:  # noqa: BLE001 — OCR-кроп не должен ронять запрос
                 print(f"[ocr] ocr_label_crop failed: {e}", flush=True)
-    rr = ocr_rerank.rerank(_cfg, img, getattr(_rank, "label", img),
-                           pre_ocr_slug, pre_ocr_score,
-                           _ocr_extractor, _ocr_matcher, _ocr_verifier,
-                           ocr_image=ocr_crop,
-                           pre_ocr_candidates=[r["slug"] for r in (getattr(_rank, "res", None) or [])],
-                           bottle_crop=getattr(_rank, "bottle", None))
-    if _fusion is not None and rr.get("ocr_fields"):
-        res = getattr(_rank, "res", None) or []
-        try:
-            fr = _fusion.rerank(rr["ocr_fields"],
-                                [{"slug": r["slug"], "score": r["score"]} for r in res],
-                                query_crop=getattr(_rank, "label", img),
-                                verifier=_ocr_verifier,
-                                image_k=int(_cfg.fusion.get("image_k", 30)),
-                                text_k=int(_cfg.fusion.get("text_k", 10)))
-            if fr.get("final_slug"):
-                rr["final_slug"] = fr["final_slug"]
-                rr["stage"] = "fusion"
-                rr["fusion_pool_size"] = fr.get("pool_size")
-                rr["fusion_top_candidates"] = fr.get("top_candidates")
-        except Exception as e:  # noqa: BLE001 — fusion не должен ронять запрос
-            print(f"[fusion] {e}", flush=True)
-    return rr
+    return ocr_rerank.rerank(_cfg, img, getattr(_rank, "label", img),
+                             pre_ocr_slug, pre_ocr_score,
+                             _ocr_extractor, _ocr_matcher, _ocr_verifier,
+                             ocr_image=ocr_crop,
+                             pre_ocr_candidates=[r["slug"] for r in (getattr(_rank, "res", None) or [])],
+                             bottle_crop=getattr(_rank, "bottle", None))
 
 
 @app.post("/v1/eval/predict")

@@ -12,8 +12,6 @@ FastAPI-сервис: фото этикетки → карточка вина. �
 | `crop.py` | кроп бутылки (COCO-YOLO), env-выключатель `CROP_ENABLED` |
 | `label_align.py` | постобработка этикетки: выравнивание по 4 углам (rectify, как в Adobe Scan) |
 | `ocr_rerank.py` | OCR-rerank: VLM читает кроп этикетки → мэтч по CSV → гейт top1↔top2 |
-| `text_retrieval.py` | полнокаталожный текстовый поиск (CsvMatcher + e5) — пул кандидатов (P0-2) |
-| `rerank_fusion.py` | fusion-ранкер над пулом image+text: признаки + калиброванный линейный скор (P0-3) |
 | `pipeline.py` / `pipeline_config.py` | standalone-прогон (одиночное фото / eval-CSV) и загрузка YAML |
 | `search.py` | индекс в памяти + косинусный поиск + карточки (`CatalogIndex`) |
 | `build_index.py` | строит `index/catalog[_crop].npz` из `filtered/` (эмбеддинги + crop) |
@@ -164,37 +162,15 @@ OPENROUTER_API_KEY=... python pipeline.py --config ../config/pipeline.yaml \
   --eval-csv data/real_data_with_slug_eval.csv --images-dir "data/Реальные фото"
 ```
 
-## Текстовый путь и fusion-ранкер (P0-2 / P0-3)
+## Потолок ретривера и харнесс оценки
 
 Ретривер физически не может дать 90%: 12.4% eval-фото правильный slug не
 попадает даже в **top-30**, поэтому потолок любого ре-ранкера по визуальному
-шортлисту ≈ 88% (`ML evaluation/recall_at_k.py`). Лечится **объединением**
-визуального пула с полнокаталожным текстовым поиском.
-
-**`text_retrieval.py` (P0-2).** `TextRetriever.search(fields, k)` ищет по ВСЕМ
-2108 записям каталога двумя сигналами: `csv_conf` (тот же `CsvMatcher`) и
-`e5_cos` (косинус `intfloat/multilingual-e5-small`, transformers напрямую).
-Поля VLM → строка запроса (`query_text`), карточка → строка документа
-(`catalog_text`). Union(image top-30, text top-10) покрывает ~94% истины
-(`ML evaluation/union_text_eval.py`); текст добавляет 16 кейсов вне image top-60.
-
-**`rerank_fusion.py` (P0-3).** Ранжирует объединённый пул по 13 признакам
-(`FEATURE_NAMES`: `image_cos`, `e5_cos`, `csv_conf`, `csv_margin`,
-`year/color/sugar/grape/winery/title_match`, …). Веса обучает
-`ML evaluation/train_fusion.py` (2-fold CV; hill-climb по accuracy даёт лучше
-pointwise-логистики) в `fusion_weights.json`. Ключевое: **наивное расширение
-пула со старым жёстким гейтом УХУДШАЕТ метрику** (`broken=8`), поэтому нужен
-именно калиброванный ранкер с запасом над `image top1`.
-
-Включается флагом `fusion.enabled: true` в `config/pipeline.yaml` (по умолчанию
-`false` — работает прежний `decide()`). Повторный вызов VLM не нужен: fusion
-работает на уже извлечённых `ocr_fields`. Секции конфига: `text.*`, `fusion.*`.
+шортлисту ≈ 88% (`ML evaluation/recall_at_k.py`).
 
 ```bash
 cd "ML evaluation"
-python3 recall_at_k.py        # recall@K + кэш image top-K (нужен для fusion)
-python3 union_text_eval.py    # потолок union-пула
-python3 train_fusion.py       # обучение весов (2-fold CV) -> ML service/fusion_weights.json
+python3 recall_at_k.py        # recall@K + кэш image top-K
 python3 audit_refs.py         # аудит эталонов/разметки
 python3 selftest_p0.py        # самопроверки P0 (без сети)
 ```

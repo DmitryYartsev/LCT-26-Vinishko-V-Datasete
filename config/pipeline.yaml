@@ -165,29 +165,6 @@ csv_match:
   decision_margin: 0.35
 
 
-# ---------------------------------------------------------------- текстовый путь (P0-2)
-# Полнокаталожный поиск по полям этикетки (CsvMatcher + e5). Нужен, потому что
-# правильный SKU near-dup часто НЕ попадает в визуальный top-30, а текст его
-# различает: union(image top-30, text top-10) покрывает ~94% истины против ~88%
-# у одного image top-30 (ML evaluation/union_text_eval.py).
-text:
-  enabled: true
-  use_e5: true
-  e5_model: intfloat/multilingual-e5-small
-  e5_weight: 0.5                 # вес e5 в комбинированной оценке (1-w — CsvMatcher)
-  top_k: 10                      # ширина текстового пула для union
-
-# ---------------------------------------------------------------- fusion-ранкер (P0-3)
-# Калиброванный линейный ранкер над объединённым пулом. Веса обучает
-# `ML evaluation/train_fusion.py` (2-fold CV, hill-climb по accuracy) в
-# fusion_weights.json. enabled:false -> работает прежний жёсткий гейт decide().
-fusion:
-  enabled: false
-  weights_file: ${paths.models_dir}/fusion_weights.json
-  image_k: 30
-  text_k: 10
-
-
 # ---------------------------------------------------------------- визуальная проверка
 visual:
   enabled: true
