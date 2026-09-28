@@ -73,19 +73,27 @@ paths.py  pyproject.toml  README.md  .gitignore
 
 ## Поднять сервис (Docker Compose)
 
-Нужны Docker + Compose v2 и ~4 ГБ свободного места (образы + модель SigLIP2 1.4 ГБ).
-
-### 1. Код
+На чистой машине всё, кроме ключа OCR, поднимается двумя командами:
 
 ```bash
-git clone git@github.com:DmitryYartsev/LCT-26-Vinishko-V-Datasete.git
+git clone -b ml-dev2 git@github.com:DmitryYartsev/LCT-26-Vinishko-V-Datasete.git
 cd LCT-26-Vinishko-V-Datasete
+cp /путь/к/секрету/.env .        # только ключ: OPENROUTER_API_KEY=sk-or-...
+docker compose up --build
 ```
 
-### 2. Данные и веса (в git не едут)
+Первый запуск сам скачивает то, чего нет в git (сервис `fetch`): каталог `data/`, фото
+каталога `filtered/`, веса YOLO, дамп pgvector и модель **SigLIP2 (~1.4 ГБ из HuggingFace)**.
+Нужен интернет и ~4 ГБ свободного места; прогресс — `docker compose logs -f fetch`.
+Повторные `up` ничего не перекачивают: проверяются уже лежащие файлы.
 
-**Вариант А — данные уже есть на машине** (старый клон/бэкап с папками `data/`, `filtered/`,
-`models/`): скопируйте их рядом с новым клоном.
+Дальше по цепочке: `db` (Postgres+pgvector) → `db-init` (восстанавливает векторы индекса из
+дампа) → `ml` (грузит SigLIP2 и отвечает) → `web`.
+
+Готово, когда `curl -s localhost:8080/health` отвечает `{"status":"ok", ...}`.
+
+Если данные и веса уже есть рядом (старый клон/бэкап), их можно не качать — достаточно
+положить `data/`, `filtered/`, `models/` рядом с репозиторием (скачивание тогда пропустится):
 
 ```bash
 cp -a /путь/к/старому/клону/data     .
@@ -93,38 +101,18 @@ cp -a /путь/к/старому/клону/filtered .
 cp -a /путь/к/старому/клону/models   .
 ```
 
-**Вариант Б — чистая машина**: скачивание из Google Drive + HuggingFace одной командой
-(состав архивов и параметры — в [`deploy/README.md`](deploy/README.md)):
+Проверить, что именно лежит на диске, и что не хватает: `python3 deploy/fetch_data.py --status`
+(или `docker compose run --rm fetch --status`). Подробности о составе архивов, ручных режимах
+(`--only`, `--force`, `--check`) и разборе ошибок — в [`deploy/README.md`](deploy/README.md).
 
-```bash
-bash deploy/fetch_data.sh              # data + filtered + models + дамп pgvector + SigLIP2
-python3 deploy/fetch_data.py --check   # опционально: проверить ссылки/размеры, ничего не качая
+### Ключ OCR-реранка
+
+```
+OPENROUTER_API_KEY=sk-or-...
 ```
 
-Если python3 на хосте нет — то же самое в контейнере (образ `python:3.11-slim`, профиль `fetch`):
-
-```bash
-docker compose --profile fetch run --rm fetch              # скачать всё
-docker compose --profile fetch run --rm fetch --check       # только проверка
-```
-
-### 3. Ключ OCR-реранка
-
-```bash
-printf 'OPENROUTER_API_KEY=sk-or-...\n' > .env    # без него сервис работает только retrieval'ом
-```
-
-### 4. Запуск
-
-```bash
-docker compose up --build -d
-docker compose ps
-curl -s localhost:8080/health     # {"status":"ok", ...}
-```
-
-Что происходит: `db` поднимает Postgres+pgvector → `db-init` восстанавливает дамп БД (векторы
-индекса; если дампа нет — `ml` посчитает эмбеддинги сам, ~40 мин) → `ml` грузит SigLIP2 и
-отвечает → `web` поднимает UI.
+Без него сервис поднимется, но работает только retrieval (без OCR-переранжирования) — об этом
+будет предупреждение в логе `docker compose logs ml`.
 
 | Адрес | Что |
 |---|---|

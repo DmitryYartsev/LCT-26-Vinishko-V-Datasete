@@ -33,24 +33,30 @@ ARCHIVES = [
         'comment': 'каталог, эталонные фото, OCR-поля (data/)',
         'gid': '19nvLvudN4DH9whIVgrXJSQQmSAaYpydH',
         'expect': 259_466_482,
+        # что должно лежать на диске, чтобы шаг считался выполненным
+        'artifacts': ['data/found_in_catalog_corrected.csv', 'data/eval.csv',
+                      'data/catalog_ocr_fields.csv', 'data/start_photos'],
     },
     {
         'name': 'filtered',
         'comment': 'фото каталога <slug>/NN.webp + catalog.csv (filtered/)',
         'gid': '1IoQAlH4jdIboyxQZKChe8dClbUEhkoAL',
         'expect': 136_886_641,
+        'artifacts': ['filtered/catalog.csv', 'filtered'],
     },
     {
         'name': 'models',
         'comment': 'YOLO-детекторы: label_det_best.pt, yolo11n.pt (models/)',
         'gid': '1th7GbXvoUeI-PmfcZn9Q0ke4JlPpPhYa',
         'expect': 11_850_390,
+        'artifacts': ['models/label_det_best.pt', 'models/yolo11n.pt'],
     },
     {
         'name': 'dump',
         'comment': 'дамп pgvector (векторы индекса) — в deploy/archives/',
         'gid': '1FRC2oUEeV8TYstCJ6x7OqSEPKA31z7_L',
         'expect': 31_591_750,
+        'artifacts': ['deploy/archives/pgvector.dump'],
     },
 ]
 
@@ -253,11 +259,17 @@ def main(argv=None) -> int:
     ap.add_argument('--no-encoder', action='store_true', help='не качать SigLIP2 из HuggingFace')
     ap.add_argument('--only-encoder', action='store_true', help='качать только SigLIP2')
     ap.add_argument('--check', action='store_true', help='только проверить ссылки и размеры')
+    ap.add_argument('--status', action='store_true', help='показать, что уже на диске')
     args = ap.parse_args(argv)
 
     dest = Path(args.dest).resolve() if args.dest else REPO
     only = [s.strip() for s in args.only.split(',') if s.strip()]
     log(f'[fetch] корень распаковки: {dest}')
+
+    if args.status:
+        ok = status(dest, with_encoder=not args.no_encoder)
+        log('[fetch] состояние: ' + ('всё на месте ✓' if ok else 'не всё (см. выше)'))
+        return 0 if ok else 1
 
     if args.check:
         ok = check_only(only, with_encoder=not args.no_encoder)
@@ -268,8 +280,9 @@ def main(argv=None) -> int:
         fetch_archives(dest, only, args.force, args.keep_zips)
     if not args.no_encoder:
         fetch_encoder(dest)
-    log('[fetch] готово ✓')
-    return 0
+    ok = status(dest, with_encoder=not args.no_encoder)
+    log('[fetch] готово ' + ('✓' if ok else '— но чего-то не хватает (см. выше)'))
+    return 0 if ok else 1
 
 
 def _run() -> int:
@@ -284,14 +297,51 @@ def _run() -> int:
         return 3
 
 
+def _artifact_ok(dest: Path, rel: str) -> bool:
+    """Есть ли артефакт на месте (папка — непустая, файл — непустой)."""
+    p = dest / rel
+    if p.is_dir():
+        return any(p.iterdir())
+    return p.is_file() and p.stat().st_size > 0
+
+
+def _archive_done(arc: dict, dest: Path) -> bool:
+    """Все артефакты архива уже на диске (значит, качать/распаковывать не нужно)."""
+    return all(_artifact_ok(dest, a) for a in arc.get('artifacts', []))
+
+
+def status(dest: Path, with_encoder: bool = True) -> bool:
+    """Печатает, что уже лежит на диске, а чего не хватает (ничего не качает)."""
+    log(f'  [состояние] {dest}')
+    ok = True
+    for arc in ARCHIVES:
+        miss = [a for a in arc.get('artifacts', []) if not _artifact_ok(dest, a)]
+        mark = '✓' if not miss else '✗'
+        ok = ok and not miss
+        log(f'    {mark} {arc["name"]:9s} {arc["comment"]}'
+            + (f' — не хватает: {", ".join(miss)}' if miss else ''))
+    if with_encoder:
+        enc_dir = dest / 'models' / 'siglip2-base-patch16-256'
+        miss = [n for n, sz in ENCODER_FILES
+                if not (enc_dir / n).is_file() or (enc_dir / n).stat().st_size != sz]
+        ok = ok and not miss
+        log(f'    {"✓" if not miss else "✗"} encoder   SigLIP2 ({ENCODER_REPO})'
+            + (f' — не хватает: {", ".join(miss)}' if miss else ''))
+    return ok
+
+
 def fetch_archives(dest_root: Path, only: list, force: bool, keep_zips: bool) -> list:
     """Качает архивы и раскладывает их по местам. Возвращает список обработанных имён."""
     dest_zips = dest_root / 'deploy' / 'archives'
     dest_zips.mkdir(parents=True, exist_ok=True)
+    todo = [a for a in ARCHIVES if not only or a['name'] in only]
     done = []
-    for arc in ARCHIVES:
-        if only and arc['name'] not in only:
+    for idx, arc in enumerate(todo, 1):
+        if not force and _archive_done(arc, dest_root):
+            log(f'[{idx}/{len(todo)}] {arc["name"]}: уже на месте — пропускаю')
+            done.append(f'{arc["name"]}(skip)')
             continue
+        log(f'[{idx}/{len(todo)}] {arc["name"]}')
         zip_path = download_archive(arc, dest_zips, force)
         extract_zip(zip_path, dest_root)
         log(f'    распаковано в {dest_root}/')

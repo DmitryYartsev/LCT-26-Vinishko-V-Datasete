@@ -33,11 +33,15 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      fetch:
+        condition: service_completed_successfully
 
-  # Скачивание данных/моделей на сервере БЕЗ python3 на хосте: docker compose --profile fetch run --rm fetch
-  # (использует только стандартную библиотеку python, поэтому берём чистый python-образ).
+  # Скачивание данных/моделей — часть обычного запуска: на чистой машине достаточно
+  # `git clone` + `docker compose up --build`. Сервис проверяет артефакты и качает только
+  # отсутствующее (повторный `up` ничего не тянет). Спутники (db-init, ml) ждут его завершения.
+  # Только stdlib python — поэтому берём чистый python-образ.
+  # Ручной запуск: docker compose run --rm fetch [--status|--check|--force|--only data,dump]
   fetch:
-    profiles: ["fetch"]
     image: python:3.11-slim
     working_dir: /app
     volumes:
@@ -45,8 +49,6 @@ services:
       - "./data:/app/data"
       - "./filtered:/app/filtered"
       - "./models:/app/models"
-    # entrypoint, а не command: тогда `docker compose --profile fetch run --rm fetch --check`
-    # передаёт аргументы в скрипт (например --check или --only data,dump)
     entrypoint: ["python3", "/app/deploy/fetch_data.py"]
 
   ml:
@@ -83,6 +85,8 @@ services:
       db:
         condition: service_healthy
       db-init:
+        condition: service_completed_successfully
+      fetch:
         condition: service_completed_successfully
     ports:
       - "8080:8080"

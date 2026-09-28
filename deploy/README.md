@@ -9,15 +9,37 @@
 
 ## Порядок действий
 
+На чистой машине достаточно двух команд — всё остальное делает сам `docker compose`:
+
 ```bash
-git clone <repo> && cd LCT-26-Vinishko-V-Datasete
-bash deploy/fetch_data.sh           # данные + модели + дамп БД + SigLIP2 (1.4 ГБ из HuggingFace)
-printf 'OPENROUTER_API_KEY=sk-or-...\n' > .env   # ключ без него: только retrieval, без OCR-rerank
-docker compose up --build -d        # db -> db-init (восстановит дамп) -> ml -> web
-curl -s localhost:8080/health       # {"status":"ok", ...}
+git clone -b ml-dev2 git@github.com:DmitryYartsev/LCT-26-Vinishko-V-Datasete.git
+cd LCT-26-Vinishko-V-Datasete
+cp /путь/к/секрету/.env .     # единственный ручной шаг: OPENROUTER_API_KEY=sk-or-...
+docker compose up --build     # fetch -> db -> db-init -> ml -> web
 ```
 
-Проверка перед запуском (ничего не качает): `python3 deploy/fetch_data.py --check`.
+Что происходит на первом запуске:
+
+1. `fetch` (образ `python:3.11-slim`) скачивает отсутствующее: `data/`, `filtered/`,
+   `models/`, дамп pgvector и SigLIP2 из HuggingFace (~1.4 ГБ). Прогресс — `docker compose logs -f fetch`;
+2. `db` поднимает Postgres+pgvector, `db-init` восстанавливает дамп (векторы индекса);
+3. `ml` грузит SigLIP2 и отвечает, `web` отдаёт UI.
+
+Готово, когда `curl -s localhost:8080/health` отвечает `{"status":"ok", ...}`.
+
+Повторные запуски ничего не перекачивают: `fetch` проверяет, что нужные файлы уже лежат
+(`docker compose run --rm fetch --status` — показать состояние, `--check` — проверить сами
+ссылки в облаке, ничего не качая).
+
+Скачивание можно запустить и вручную, без полного `up`:
+
+```bash
+bash deploy/fetch_data.sh                       # на хосте (нужен python3)
+docker compose run --rm fetch                   # в контейнере (то же самое)
+docker compose run --rm fetch --status          # что уже на месте
+docker compose run --rm fetch --only data,dump  # только часть
+docker compose run --rm fetch --force           # перекачать заново
+```
 
 ## Что именно скачивается
 
@@ -47,19 +69,21 @@ curl -s localhost:8080/health       # {"status":"ok", ...}
 
 ```bash
 bash deploy/fetch_data.sh                  # всё: data, filtered, models, дамп, SigLIP2
+bash deploy/fetch_data.sh --status         # что уже на диске, а чего не хватает
 bash deploy/fetch_data.sh --no-encoder     # без SigLIP2 (если качаете отдельно/уже есть)
 bash deploy/fetch_data.sh --only data,dump # только часть
 bash deploy/fetch_data.sh --force          # перекачать архивы заново
 bash deploy/fetch_data.sh --keep-zips      # не удалять скачанные архивы
-python3 deploy/fetch_data.py --dest /tmp/x # распаковать в другой корень (проверка)
+python3 deploy/fetch_data.py --dest /tmp/x --status   # посмотреть другой корень
+docker compose run --rm fetch --check      # проверить ссылки/размеры в облаке (без скачивания)
 ```
 
-На сервере **без python3** на хосте скачивание можно выполнить в контейнере
-(используется образ `python:3.11-slim`, только стандартная библиотека):
+На сервере **без python3** на хосте то же самое делается в контейнере
+(образ `python:3.11-slim`, только стандартная библиотека): `docker compose run --rm fetch`.
 
-```bash
-docker compose --profile fetch run --rm fetch
-```
+Если данные удалили, а `docker compose up` их не возвращает (контейнер `fetch` уже завершён
+успешно и переиспользуется) — прогоните шаг принудительно:
+`docker compose up --force-recreate fetch` или `docker compose run --rm fetch`.
 
 ## Обновление данных на сервере
 
@@ -79,5 +103,6 @@ docker compose --profile fetch run --rm fetch
 | `Google Drive вернул страницу вместо файла` | ссылка/`id` устарели — проверьте `ARCHIVES` в `fetch_data.py` |
 | `это не zip-архив` | файл скачался не полностью: `--force` |
 | `No space left on device` | нужно ~3 ГБ свободного места (1.4 ГБ модель + архивы + распаковка) |
+| `docker compose up` пишет `dependency failed to start: ... fetch exited (N)` | скачивание упало: `docker compose logs fetch` (нет сети / нет доступа к файлу / мало места) |
 | `[preflight] НЕ ХВАТАЕТ ФАЙЛОВ` | не выполнен `fetch_data.sh` (или упал на середине) |
 | `OpenRouter` не отвечает / нет OCR-переранжирования | нет `.env` с `OPENROUTER_API_KEY` |
