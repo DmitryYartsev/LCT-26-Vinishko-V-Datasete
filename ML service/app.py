@@ -63,7 +63,7 @@ def _rank(img: Image.Image, k: int = 5):
     top1 = res[0]["score"] if res else 0.0
     top2 = res[1]["score"] if len(res) > 1 else 0.0
     margin = round(top1 - top2, 4)
-    in_catalog = bool(top1 >= THRESH_SCORE and margin >= THRESH_MARGIN)
+    in_catalog = bool(top1 >= THRESH_SCORE)
     return res, top1, margin, in_catalog
 
 

@@ -64,6 +64,8 @@ services:
     environment:
       NUXT_ML_URL: http://ml:8080
       NUXT_SOMMELIER_URL: http://sommelier:8090
+      # 1 — показывать в UI время поиска, сходство и score/margin (для демо)
+      NUXT_PUBLIC_DEBUG_INFO: ${DEBUG_INFO:-0}
     depends_on:
       - ml
       - sommelier

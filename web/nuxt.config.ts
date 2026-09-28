@@ -6,6 +6,11 @@ export default defineNuxtConfig({
   runtimeConfig: {
     mlUrl: process.env.ML_URL || "http://localhost:8080",
     sommelierUrl: process.env.SOMMELIER_URL || "http://localhost:8090",
+    public: {
+      // техническая инфа в UI (время поиска, сходство, score/margin) — для демо/отладки, не для пользователя.
+      // В рантайме: NUXT_PUBLIC_DEBUG_INFO=1
+      debugInfo: ["1", "true"].includes(process.env.NUXT_PUBLIC_DEBUG_INFO || ""),
+    },
   },
   app: {
     head: {
