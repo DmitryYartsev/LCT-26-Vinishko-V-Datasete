@@ -132,11 +132,11 @@ cd "ML service"
 DATABASE_URL=postgresql://vino:vino@localhost:5432/vino uv run uvicorn app:app --port 8080
 ```
 
-**6. Валидация:**
+**6. Валидация** (сервис поднят; тестовый набор — `image_labeling/dataset_v0`, подробнее в `ML evaluation/README.md`):
 ```bash
 cd "ML evaluation"
-uv run python build_queryset.py
-CROP_ENABLED=1 uv run python evaluate.py --queryset querysets/scrape.jsonl --tag scrape_crop
+uv run python build_queryset.py                  # -> querysets/dataset.jsonl
+uv run python evaluate.py --queryset querysets/dataset.jsonl --tag dataset_v0
 ```
 
 **Прогон скрипта-оценщика** (нужен `jq`, сервис поднят):

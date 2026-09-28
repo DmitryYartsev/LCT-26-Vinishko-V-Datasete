@@ -28,7 +28,7 @@ Mobile-first интерфейс сканера в стилистике «Сво�
 
 ```bash
 npm install
-npm run dev          # http://localhost:3000, бэкенды: ML_URL / SOMMELIER_URL (по умолч. localhost:8080 / :8090)
+npm run dev          # http://localhost:3000, бэкенды: ML_URL / SOMMELIER_URL (по умолч. 127.0.0.1:8080 / :8090)
 npm run build && node .output/server/index.mjs   # прод; адреса — NUXT_ML_URL / NUXT_SOMMELIER_URL
 ```
 

@@ -8,6 +8,9 @@
   GET  /ref/{slug}       — эталонное фото
   GET  /health           — статус
 
+Пайплайн: кроп бутылки -> эмбеддинг -> top-K из pgvector -> (опц.) реранк мультимодальным
+реранкером по фото эталонов (rerank.py, env RERANK_BACKEND) -> top-5.
+
 На старте: warm-up (сид каталога + построение индекса в pgvector, если пусто).
 Модели и пороги — через env (см. README).
 """
@@ -25,6 +28,7 @@ import db
 from encoder import get_encoder
 from crop import maybe_crop, CROP_ENABLED
 from build_index import warmup
+import rerank
 
 THRESH_SCORE = float(os.environ.get("THRESH_SCORE", "0.75"))
 THRESH_MARGIN = float(os.environ.get("THRESH_MARGIN", "0.015"))
@@ -46,6 +50,10 @@ def _load():
     _conn = db.connect()
     if CROP_ENABLED:
         from crop import get_cropper; get_cropper()
+    if rerank.ENABLED:
+        err = rerank.check_config()
+        print(f"[startup] реранк: {rerank.BACKEND}, top-{rerank.TOP_K}, weight={rerank.WEIGHT}"
+              + (f" — НЕ РАБОТАЕТ: {err}" if err else ""))
     print(f"[startup] готово за {time.time()-t:.1f}с")
 
 
@@ -59,29 +67,34 @@ def _read_image(raw: bytes) -> Image.Image:
 def _rank(img: Image.Image, k: int = 5):
     img, _ = maybe_crop(img)
     q = _enc.embed([img])[0]
-    res = db.search(_conn, q, _enc.model_name, k=k)
+    res = db.search(_conn, q, _enc.model_name, k=max(k, rerank.TOP_K) if rerank.ENABLED else k)
+    # уверенность/in_catalog — по визуальному скору (до реранка): пороги калиброваны под него
     top1 = res[0]["score"] if res else 0.0
     top2 = res[1]["score"] if len(res) > 1 else 0.0
     margin = round(top1 - top2, 4)
     in_catalog = bool(top1 >= THRESH_SCORE)
-    return res, top1, margin, in_catalog
+    head, rr_info = rerank.rerank(img, res[:rerank.TOP_K])   # реранкаем ровно top-K, хвост как есть
+    res = head + res[rerank.TOP_K:]
+    return res[:k], top1, margin, in_catalog, rr_info
 
 
 @app.post("/v1/eval/predict")
 async def eval_predict(image: UploadFile = File(...)):
-    res, top1, margin, in_catalog = _rank(_read_image(await image.read()))
+    res, top1, margin, in_catalog, _ = _rank(_read_image(await image.read()))
     if EVAL_ABSTAIN and not in_catalog:
         return JSONResponse({"slug": None})
     return JSONResponse({"slug": res[0]["slug"] if res else None, "score": top1, "margin": margin})
 
 
 @app.post("/v1/search")
-async def search(image: UploadFile = File(...)):
+async def search(image: UploadFile = File(...), k: int = 5):
+    """`k` — сколько результатов вернуть (харнесс берёт 10, чтобы мерить recall@10 до/после реранка)."""
     t = time.perf_counter()
-    res, top1, margin, in_catalog = _rank(_read_image(await image.read()))
+    res, top1, margin, in_catalog, rr_info = _rank(_read_image(await image.read()), k=max(1, min(k, 50)))
     return {"in_catalog": in_catalog, "elapsed_ms": round(1000 * (time.perf_counter() - t)),
             "confidence": {"top1_score": top1, "margin": margin,
                            "thresholds": {"score": THRESH_SCORE, "margin": THRESH_MARGIN}},
+            "rerank": rr_info,
             "top1": res[0] if res else None, "results": res}
 
 
@@ -120,6 +133,8 @@ def health():
     return {"status": "ok",
             "model": _enc.model_name if _enc else None,
             "crop": CROP_ENABLED,
+            "rerank": {"backend": rerank.BACKEND, "top_k": rerank.TOP_K, "weight": rerank.WEIGHT,
+                       "error": rerank.check_config() if rerank.ENABLED else None},
             "wines": db.count_wines(_conn) if _conn else 0,
             "models": db.list_models(_conn) if _conn else []}
 

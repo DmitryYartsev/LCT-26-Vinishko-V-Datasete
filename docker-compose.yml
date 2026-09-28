@@ -28,6 +28,15 @@ services:
       CROP_MODEL: ${CROP_MODEL:-yolo11n.pt}
       THRESH_SCORE: ${THRESH_SCORE:-0.75}
       THRESH_MARGIN: ${THRESH_MARGIN:-0.015}
+      # реранк top-K по фото эталонов: none | jina | dashscope (см. ML service/rerank.py)
+      RERANK_BACKEND: ${RERANK_BACKEND:-none}
+      RERANK_TOP_K: ${RERANK_TOP_K:-10}
+      RERANK_WEIGHT: ${RERANK_WEIGHT:-0.5}
+      RERANK_TIMEOUT: ${RERANK_TIMEOUT:-5}
+      RERANK_IMG_SIDE: ${RERANK_IMG_SIDE:-448}
+      JINA_API_KEY: ${JINA_API_KEY:-}
+      DASHSCOPE_API_KEY: ${DASHSCOPE_API_KEY:-}
+      DASHSCOPE_RERANK_URL: ${DASHSCOPE_RERANK_URL:-}
     volumes:
       - "./paths.py:/app/paths.py:ro"
       - "./ML service:/app/ml"

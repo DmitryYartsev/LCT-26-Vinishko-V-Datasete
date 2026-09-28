@@ -4,8 +4,8 @@ export default defineNuxtConfig({
   devServer: { host: "0.0.0.0", port: 3000 },
   css: ["~/assets/css/main.css"],
   runtimeConfig: {
-    mlUrl: process.env.ML_URL || "http://localhost:8080",
-    sommelierUrl: process.env.SOMMELIER_URL || "http://localhost:8090",
+    mlUrl: process.env.ML_URL || "http://127.0.0.1:8080",
+    sommelierUrl: process.env.SOMMELIER_URL || "http://127.0.0.1:8090",
     public: {
       // техническая инфа в UI (время поиска, сходство, score/margin) — для демо/отладки, не для пользователя.
       // В рантайме: NUXT_PUBLIC_DEBUG_INFO=1

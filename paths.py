@@ -15,7 +15,9 @@ CATALOG_SRC = ORG / "strapi_output0709.csv"          # оригинальный 
 
 # --- сырые данные изображений (gitignore) ---
 UPLOADS = ROOT / "raw_images"                         # распакованная медиатека Strapi (вход)
-SCRAPED = ROOT / "solution/images/scraped_raw"        # веб-скрейп (в процессе; solution/ уберём позже)
+SCRAPED = ROOT / "scraped_raw"                        # веб-скрейп: <slug>/ya_NN.* (метки шумные)
+LABELS_CSV = ROOT / "image_labeling" / "labels.csv"   # ручная разметка скрейпа: Slug,image,label(good/bad/skip)
+DATASET_V0 = ROOT / "image_labeling" / "dataset_v0"  # тестовый набор: <slug>.<ext>, 171 фото (основной для оценки)
 
 # --- обработанные данные (выход process_images.py, gitignore) ---
 FILTERED = ROOT / "filtered"                          # <slug>/NN.webp — все фото по вину
