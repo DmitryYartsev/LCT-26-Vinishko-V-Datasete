@@ -1,0 +1,79 @@
+/* Токены и базовые элементы в стилистике «Своё Вино» (макет WineScanner). */
+:root {
+  --bg: #FCFAF6;
+  --ink: #2B2522;
+  --ink-2: #4A423E;
+  --muted: #8A817C;
+  --wine: #8E3A45;
+  --wine-hover: #7A2F39;
+  --wine-deep: #6E2A33;
+  --fab: #7B2F2B;
+  --fab-hover: #6A2825;
+  --rose: #F3E6E3;          /* подложка акцентов (иконки, «спросить сомелье») */
+  --cream: #FBF5EA;         /* подложка карточек вин и пузырей бота */
+  --cream-2: #F3E8D6;       /* плашка рейтинга */
+  --sand: #F6EEE8;
+  --line: #EDE3D8;
+  --line-2: #E2D2C9;        /* бордер вторичных кнопок */
+  --line-3: #E6D8CE;        /* бордер чипов */
+  --ok: #4F7A4A;
+  --ok-bg: #E6EFE2;
+  --part: #8A6A2E;
+  --rec: #B3262E;
+
+  --serif: "Playfair Display", Georgia, serif;
+  --sans: "Noto Sans", system-ui, -apple-system, sans-serif;
+  --pad-x: 16px;
+}
+@media (min-width: 720px) { :root { --pad-x: 32px; } }
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; background: var(--bg); }
+body { color: var(--ink); font: 400 15px/1.5 var(--sans); -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent; }
+a { color: var(--wine); text-decoration: none; }
+a:hover { color: var(--wine-deep); }
+button { font-family: inherit; }
+img { display: block; }
+
+.serif { font-family: var(--serif); font-weight: 400; }
+.muted { color: var(--muted); }
+
+/* кнопки */
+.btn { height: 56px; padding: 0 28px; border-radius: 18px; font: 600 16px var(--sans); cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center; gap: 10px; border: none;
+  transition: background .15s, border-color .15s; white-space: nowrap; }
+.btn-primary { background: var(--wine); color: #fff; }
+.btn-primary:hover { background: var(--wine-hover); color: #fff; }
+.btn-secondary { background: #fff; color: var(--wine); border: 1.5px solid var(--line-2); }
+.btn-secondary:hover { border-color: var(--wine); }
+.btn:disabled { opacity: .5; cursor: default; }
+
+.chip { border: 1px solid var(--line-3); background: #fff; color: var(--ink); border-radius: 999px;
+  padding: 8px 16px; font: 400 14px var(--sans); cursor: pointer; transition: border-color .15s, color .15s; }
+.chip:hover { border-color: var(--wine); color: var(--wine); }
+
+.back { align-self: flex-start; cursor: pointer; color: var(--muted); font-size: 14px; background: none; border: none;
+  padding: 0; display: inline-flex; align-items: center; gap: 6px; }
+.back:hover { color: var(--wine); }
+
+.link-card { cursor: pointer; display: flex; align-items: center; gap: 14px; background: #fff; border: 1px solid var(--line);
+  border-radius: 22px; padding: 14px 18px; color: inherit; transition: border-color .15s; text-align: left; width: 100%;
+  font: inherit; }
+.link-card:hover { border-color: var(--wine); color: inherit; }
+
+.h1 { margin: 0; font: 400 36px/1.1 var(--serif); text-wrap: balance; }
+.h2 { margin: 0; font: 400 24px/1.2 var(--serif); }
+@media (min-width: 720px) {
+  .h1 { font-size: 44px; }
+  .h2 { font-size: 30px; }
+}
+
+/* сетка карточек вин */
+.tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+@media (min-width: 720px) { .tiles { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px; } }
+
+@keyframes wsScan { 0% { top: 0% } 50% { top: 96% } 100% { top: 0% } }
+@keyframes wsPulse { 0%, 100% { transform: scale(1); opacity: 1 } 50% { transform: scale(1.18); opacity: .6 } }
+@keyframes wsDots { 0%, 80%, 100% { opacity: .25 } 40% { opacity: 1 } }
+@keyframes wsFade { from { opacity: 0; transform: translateY(6px) } to { opacity: 1; transform: none } }
