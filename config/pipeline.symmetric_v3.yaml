@@ -13,10 +13,6 @@ paths:
   reference_csv: /app/ref/found_in_catalog_corrected.csv
   start_photos: /app/ref/start_photos
   models_dir: /app/models
-  # OCR-разметка каталожных фото (генератор: ML evaluation/catalog_ocr.py). Лежит РЯДОМ
-  # с каталогом: в Docker /app/ref/..., на хосте `apply_host_paths` переписывает в
-  # <repo>/data/... (см. csv_match.enrichment_file=auto).
-  catalog_ocr_fields: /app/ref/catalog_ocr_fields.csv
 
 # ---------------------------------------------------------------- retrieval (текущая версия пайплайна)
 retrieval:
@@ -30,7 +26,7 @@ retrieval:
   crop_enabled: true
   crop_model: ${paths.models_dir}/yolo11n.pt
   crop_margin: 0.06
-  crop_min_conf: 0.25
+  crop_min_conf: 0.10
 
   label_enabled: true            # USE_LABEL_BRANCH
   label_model: ${paths.models_dir}/label_det_best.pt
@@ -40,9 +36,9 @@ retrieval:
   # ИНДЕКС (`build_index.py`) собирается этими значениями. Исторические значения =
   # прежнее поведение (индекс уже собран так); менять их — только вместе с
   # `build_index.py --force`.
-  crop_pick: big_center          # big_center (истор.) | big_center_border
-  crop_fallback: orig            # orig (истор.) | label — этикетка прямо по фото
-  crop_min_area: 0.0             # мин. площадь бокса бутылки, доля кадра (0 — не фильтровать)
+  crop_pick: big_center_border
+  crop_fallback: label
+  crop_min_area: 0.12
   label_pick: conf               # conf (истор.) | conf_size_center
   label_min_w_frac: 0.0          # отсечь боксы этикетки уже этой доли ширины кропа
   # ЗАПРОС (UGC-фото полки) — отдельная политика, индекс НЕ пересобирается
@@ -50,12 +46,12 @@ retrieval:
   # 24% фото, а при conf 0.10 вылезают крошечные ложные боксы — их режет min_area,
   # и этикетка берётся прямо с фото: recall@1 0.6774 -> 0.7581 (+5 кейсов, 0 регрессий).
   # Пустое значение = запрос идёт политикой индекса (откат к прежнему поведению).
-  query_crop_pick: big_center_border
-  query_crop_fallback: label
-  query_crop_min_conf: 0.10
-  query_crop_min_area: 0.12
-  query_label_pick: conf
-  query_label_min_w_frac: 0.0
+  query_crop_pick: ""
+  query_crop_fallback: ""
+  query_crop_min_conf: ""
+  query_crop_min_area: ""
+  query_label_pick: ""
+  query_label_min_w_frac: ""
   # Отклонённые варианты (детали и числа — в отчётах): симметричный v2-набор
   # (crop_pick big_center_border + fallback label + label_pick conf_size_center +
   # label_min_w_frac 0.35) детекторно лучше (бутылка 75.8% -> 90.3%, флаги 40% -> 29%),
@@ -102,10 +98,7 @@ ocr:
   # Страховка на ошибки детектора этикетки/rectify: если VLM прочитал кроп плохо
   # (нет бренда и сорта, либо сорт вне словаря каталога) — второй проход VLM по КРОПУ
   # БУТЫЛКИ с слиянием полей (+1 вызов VLM только для таких фото). Отчёт 20.
-  # Включено: 62 → 0.8387 → 0.8710 (починены 48.98 и 96.96, регрессий 0); страховка
-  # срабатывает на ~20% фото. Полная замена на кроп бутылки (`label_crop: bottle`)
-  # даёт тот же результат, но читает кроп бутылки для ВСЕХ фото.
-  retry_on_poor_fields: true
+  retry_on_poor_fields: false
   min_side: 800                  # апскейл мелкого кропа этикетки перед VLM, px (0 — не трогать)
   max_side: 1400                 # ограничение размера (токены/латентность), px (0 — не трогать)
 
@@ -144,13 +137,6 @@ csv_match:
   # («Мускат Белый» -> muskatbelii), а алиасы дают английскую форму (muscat);
   # без этого сорт обнулялся (кейс 96.61, отчёт 20).
   fuzzy_ck_norm: true
-  # OCR-разметка каталожных фото (ML evaluation/catalog_ocr.py -> data/catalog_ocr_fields.csv):
-  # сорт/линейка/сахар и пустой год ДОПОЛНЯЮТ записи каталога (исходную разметку не меняем).
-  # auto = брать paths.catalog_ocr_fields (в Docker /app/ref, на хосте <repo>/data);
-  # "" / none = выключено; иначе — путь (абсолютный или относительно корня репозитория).
-  # Проверено офлайн-реплеем (отчёт 21): 62 без изменений (54/62), 233 +1 кейс (177→178),
-  # регрессий 0. Мусорные чтения отсекает проверка бренда (_enr_consistent: 1705 из 2107).
-  enrichment_file: auto
   # OCR-rerank работает как re-rank короткого списка retrieval, а НЕ поиск по всем
   # 2108 записям каталога: правильный ответ почти всегда уже в top-k retrieval,
   # а лишние кандидаты создают ложные «ничьи» (см. ML evaluation/replay_ocr.py).
@@ -200,9 +186,8 @@ visual:
 
 # ---------------------------------------------------------------- вывод
 output:
-  # Пути монтируются в Docker как /app/... (docker-compose.yml); для прогонов НА ХОСТЕ
-  # pipeline.apply_host_paths() переписывает их в <repo>/data и <repo>/reports, поэтому
-  # машинозависимых абсолютных путей в конфиге нет.
+  # как в config/pipeline.yaml: контейнерные пути; на хосте apply_host_paths() переписывает
+  # их в <repo>/data и <repo>/reports (машинозависимых абсолютных путей в репозитории нет)
   eval_csv: /app/ref/real_data_with_slug_eval.csv
   images_dir: /app/ref/real_photo
   out_dir: /app/reports

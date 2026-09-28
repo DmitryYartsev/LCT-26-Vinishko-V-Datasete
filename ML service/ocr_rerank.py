@@ -4,16 +4,21 @@
 Добавляет поверх image retrieval (SigLIP2 + pgvector) второй проход:
 
   1. ``OcrExtractor`` — ОДИН вызов внешней vision-модели (gpt-4o-mini через
-     OpenRouter) на фото: извлекает с этикетки поля
-     ``year/winery/grape/wine_type/additional_text``. Промт извлекается из
-     ``paths.prompt_file`` (берётся только секция извлечения признаков).
+     OpenRouter) на изображении: извлекает с этикетки поля
+     ``year/winery/grape/color/sugar/wine_type/additional_text``. Промт
+     извлекается из ``paths.prompt_file`` (берётся только секция извлечения
+     признаков). На вход по умолчанию подаётся ВЫПРЯМЛЕННЫЙ кроп этикетки
+     (``ocr.use_label_crop``), а не сырое полочное фото — иначе модель не
+     вычитывает мелкий наклонный год/цвет/тип.
   2. ``CsvMatcher`` — самописный (без модели) мэтчинг извлечённых параметров
-     по референсному CSV (``found_in_catalog_corrected.csv``). Важность полей
-     (по убыванию): винодельня > категория (цвет+сладость) > сорт винограда >
-     год (только при конфликте винтажей) > дополнительный текст.
-  3. ``VisualVerifier`` — если уверенность CSV-мэтча выше уверенности ответа
-     модели до OCR, проверяем косинусную близость фото каталога (start_photos)
-     и текущего фото через тот же энкодер.
+     по референсному CSV (``found_in_catalog_corrected.csv``). Поля и веса:
+     винодельня > сорт ≈ год ≈ цвет ≈ тип (сладость) > доп. текст. Год и
+     цвет/тип — дискриминаторы near-dup «сестёр», поэтому весят высоко, а год
+     учитывается ВСЕГДА (а не только при конфликте винтажей).
+  3. ``VisualVerifier`` — косинусная близость (SigLIP2) фото каталога
+     (start_photos) и текущего фото. Работает как МЯГКИЙ подтверждающий сигнал:
+     решение об override принимается по разрыву CSV top1↔top2 (и абсолютной
+     уверенности), а не сравнением CSV-уверенности с косинусом retrieval.
 
 Итог: ``rerank()`` возвращает финальный slug + какая ветка победила + скоринг.
 
@@ -34,6 +39,9 @@ from pathlib import Path
 
 import requests
 import numpy as np
+from PIL import Image
+
+REPO = Path(__file__).resolve().parents[1]   # корень репозитория (для относительных путей)
 
 # ---------------------------------------------------------------- транслит / канонизация
 _RU_LAT = {
@@ -81,6 +89,44 @@ def parse_slug(slug: str):
     return [p for p in parts if p], digits
 
 
+# год в свободном тексте названия/описания: 1950-1999 и 2000-2039
+_YEAR_TEXT_RE = re.compile(r'\b(19[5-9]\d|20[0-3]\d)\b')
+
+
+def year_code(raw) -> str:
+    """Год -> 4 цифры ('2013'); '' — не распознан.
+
+    Принимаем ТОЛЬКО явный 4-значный год в диапазоне 1950-2039. Короткие
+    (2-3-значные) суффиксы слагов — это НЕ винтаж, а крепость/объём
+    (``-12`` -> 12%, ``-135`` -> 13.5%, ``-750`` -> 0.75 л): в каталоге таких
+    суффиксов ~1800 из 2108, и год в названии записи совпадал с ними лишь в
+    72 случаях. Раньше эти суффиксы декодировались в «год», из-за чего год,
+    прочитанный VLM с этикетки, в 96% случаев «не совпадал» с записью и
+    штрафовал правильного кандидата. Настоящий винтаж в слаге пишется
+    полностью (``aligote-barrel-2024``), его и берём.
+    """
+    d = re.sub(r'\D', '', str(raw or ''))
+    if len(d) == 4 and 1950 <= int(d) <= 2039:
+        return d
+    return ''
+
+
+def year_from_text(*texts) -> str:
+    """Первый 4-значный год (1950-2039) среди текстов или ''."""
+    for t in texts:
+        m = _YEAR_TEXT_RE.search(str(t or ''))
+        if m:
+            return m.group(0)
+    return ''
+
+
+def year_sim(entry_year: str, query_year: str) -> float:
+    """Совпадение винтажей: оба нормализованы к 4 цифрам -> 1.0 / 0.0."""
+    if not entry_year or not query_year:
+        return 0.0
+    return 1.0 if entry_year == query_year else 0.0
+
+
 # ---------------------------------------------------------------- синонимы сортов / типа
 _GRAPE_ALIAS = {
     'kaberne': 'cabernet', 'cabernet': 'cabernet', 'sauvignon': 'sauvignon',
@@ -89,28 +135,104 @@ _GRAPE_ALIAS = {
     'merlo': 'merlot', 'merlot': 'merlot', 'risling': 'riesling',
     'riesling': 'riesling', 'saperavi': 'saperavi', 'rkaciteli': 'rkatsiteli',
     'rkatsiteli': 'rkatsiteli', 'muskat': 'muscat', 'muscat': 'muscat',
-    'sira': 'syrah', 'syrah': 'syrah', 'aligote': 'aligote',
+    'sira': 'syrah', 'sirah': 'syrah', 'syrah': 'syrah', 'aligote': 'aligote',
     'kokur': 'kokur', 'traminer': 'traminer', 'gewurz': 'gewurztraminer',
-    'gevyurc': 'gewurztraminer', 'malbek': 'malbec', 'malbec': 'malbec',
+    'gevyurc': 'gewurztraminer', 'gevyurctraminer': 'gewurztraminer',
+    'malbek': 'malbec', 'malbec': 'malbec',
+    # доп. сорта/формы, встречающиеся в каталоге и на этикетках
+    'blan': 'blanc', 'blanc': 'blanc', 'gri': 'gris', 'gris': 'gris',
+    'ottonel': 'ottonel', 'krasnostop': 'krasnostop', 'bastardo': 'bastardo',
+    'cimlyanskij': 'tsimlyanskij', 'cimlyanskiy': 'tsimlyanskij',
+    'tsimlyanskij': 'tsimlyanskij', 'tsimlyanskiy': 'tsimlyanskij',
+    'aleatiko': 'aleatico', 'kefesiya': 'kefessiya', 'sabate': 'sabat',
+    'sovinonblan': 'sauvignonblanc', 'shiraz': 'syrah',
+    # склеенные canon-формы (canon_word убирает пробелы)
+    'kabernesovinon': 'cabernetsauvignon', 'kabernefran': 'cabernetfranc',
+    'pinonuair': 'pinotnoir', 'pinonuar': 'pinotnoir', 'pinogri': 'pinotgris',
+    'sovinonblan': 'sauvignonblanc', 'myuskatelye': 'muscat',
+    'krasnostopzolotovskiy': 'krasnostop', 'cimlyanskiycherniy': 'tsimlyanskij',
+    'tsimlyanskiycherniy': 'tsimlyanskij',
 }
 
 _COLOR_WORDS = {
-    'белое': 'white', 'white': 'white', 'красное': 'red', 'red': 'red',
-    'розовое': 'rose', 'rose': 'rose', 'розе': 'rose', 'pink': 'rose',
-    'игристое': 'sparkling', 'sparkling': 'sparkling',
+    'белое': 'white', 'белый': 'white', 'белая': 'white', 'белые': 'white',
+    'белого': 'white', 'white': 'white',
+    'красное': 'red', 'красный': 'red', 'красная': 'red', 'красные': 'red',
+    'красного': 'red', 'red': 'red',
+    'розовое': 'rose', 'розовый': 'rose', 'розовая': 'rose', 'розовые': 'rose',
+    'розового': 'rose', 'розе': 'rose', 'rose': 'rose', 'pink': 'rose',
+    # ВАЖНО: «игристое/шампанское» — это НЕ цвет, а отдельный КЛАСС вина
+    # (см. _SPARKLING_WORDS и поле sparkling).
+    # оранжевое (skin-contact) — отдельная категория в каталоге (16 записей);
+    # без маппинга такие записи вовсе не имели токена цвета и не штрафовались.
+    'оранжевое': 'orange', 'оранжевый': 'orange', 'оранжевые': 'orange',
+    'оранжевого': 'orange', 'оранж': 'orange', 'orange': 'orange',
 }
+
+# Оттенок из колонки ``Цвет`` (Светло-соломенный / Тёмно-рубиновый / ...)
+# -> категория цвета. Нужен как fallback, когда ``Категория`` пуста/нестандартна.
+_SHADE_COLOR = [
+    ('розов', 'rose'), ('розе', 'rose'), ('лососев', 'rose'),
+    ('рубин', 'red'), ('гранат', 'red'), ('вишн', 'red'), ('фиолет', 'red'),
+    ('пурпур', 'red'), ('красн', 'red'), ('кирпичн', 'red'),
+    ('солом', 'white'), ('золот', 'white'), ('лимон', 'white'),
+    ('зеленоват', 'white'), ('прозрачн', 'white'), ('кристальн', 'white'),
+    ('светло-желт', 'white'), ('бледно-желт', 'white'), ('желт', 'white'),
+    ('оранж', 'orange'), ('янтар', 'orange'), ('мед', 'orange'), ('лукович', 'orange'),
+]
+
+
+def _shade_color_tokens(text: str) -> list:
+    """Оттенок (``Светло-соломенный``/``Тёмно-рубиновый``) -> категория цвета."""
+    s = (text or '').lower()
+    return sorted({v for k, v in _SHADE_COLOR if k in s})
 _SWEET_WORDS = {
-    'сухое': 'dry', 'dry': 'dry', 'брют': 'brut', 'brut': 'brut',
-    'полусухое': 'semidry', 'semi-dry': 'semidry', 'semidry': 'semidry',
-    'полусладкое': 'semisweet', 'semi-sweet': 'semisweet', 'semisweet': 'semisweet',
-    'сладкое': 'sweet', 'sweet': 'sweet',
+    'сухое': 'dry', 'сухой': 'dry', 'сухая': 'dry', 'сухие': 'dry',
+    'сухого': 'dry', 'dry': 'dry',
+    'брют': 'brut', 'brut': 'brut',
+    'полусухое': 'semidry', 'полусухой': 'semidry', 'полусухие': 'semidry',
+    'полусухого': 'semidry', 'semi-dry': 'semidry', 'semidry': 'semidry',
+    'полусладкое': 'semisweet', 'полусладкий': 'semisweet', 'полусладкие': 'semisweet',
+    'полусладкого': 'semisweet', 'semi-sweet': 'semisweet', 'semisweet': 'semisweet',
+    'сладкое': 'sweet', 'сладкий': 'sweet', 'сладкие': 'sweet',
+    'сладкого': 'sweet', 'sweet': 'sweet',
 }
 # транслит-формы цвета/сладости, как они встречаются в слагах каталога
-_SLUG_COLOR = {'beloe': 'white', 'krasnoe': 'red', 'rozovoe': 'rose',
-               'igristoe': 'sparkling'}
+_SLUG_COLOR = {'beloe': 'white', 'krasnoe': 'red', 'rozovoe': 'rose'}
 _SLUG_SWEET = {'suhoe': 'dry', 'polusuhoe': 'semidry', 'polusladkoe': 'semisweet',
                'sladkoe': 'sweet', 'bryut': 'brut', 'ekstrabryut': 'extrabrut',
                'extrabrut': 'extrabrut'}
+
+# «игристое/шампанское» — отдельный КЛАСС вина (НЕ цвет). Тихие = без этих надписей.
+# Для мэтчинга игристое и шампанское сводим к одному классу 'sparkling'.
+_SPARKLING_WORDS = {
+    'игристое': 'sparkling', 'игристые': 'sparkling', 'игристый': 'sparkling',
+    'игристого': 'sparkling', 'игрист': 'sparkling', 'sparkling': 'sparkling',
+    'шампанское': 'sparkling', 'шампанский': 'sparkling', 'шампанского': 'sparkling',
+    'champagne': 'sparkling',
+    # брют встречается только у игристых — это тоже маркер класса
+    'брют': 'sparkling', 'brut': 'sparkling',
+    'тихое': 'still', 'тихие': 'still', 'тихий': 'still', 'still': 'still',
+}
+# маркеры игристого в слаге каталога (bryut/brut/spumante/...)
+_SLUG_SPARK = ('bryut', 'brut', 'ekstrabryut', 'extrabrut', 'igristoe',
+               'spumante', 'shampanskoe', 'shampan')
+
+
+def _wine_sparkling_tokens(*texts) -> list:
+    """Тексты -> токен класса: 'sparkling' (игристое/шампанское) или 'still'."""
+    out = set()
+    for text in texts:
+        s = (text or '').lower()
+        for k, v in _SPARKLING_WORDS.items():
+            if re.search(r'\b' + re.escape(k) + r'\b', s):
+                out.add(v)
+    return sorted(out)
+
+
+def _slug_spark_tokens(slug: str) -> list:
+    toks = set((slug or '').lower().split('-'))
+    return ['sparkling'] if any(t in _SLUG_SPARK for t in toks) else []
 
 
 def _norm_tokens(text: str) -> list:
@@ -122,31 +244,62 @@ def _norm_tokens(text: str) -> list:
 
 
 def _grape_tokens(text: str) -> list:
-    return [_GRAPE_ALIAS.get(t, t) for t in _norm_tokens(text)]
+    """Сорт(а) -> канонические токены. Купаж делится по запятым/«и»/слэшу.
+
+    ВАЖНО: ``canon_word`` склеивает слова («Каберне Совиньон» -> ``kabernesovinon``),
+    поэтому КУПАЖ («Каберне Совиньон, Мерло») сначала режется на части, и уже
+    каждая часть канонизируется как единый сорт.
+    """
+    if not text:
+        return []
+    parts = re.split(r'[,;/+]|\\bи\\b', str(text).lower())
+    out = []
+    for part in parts:
+        for tok in _norm_tokens(part):
+            out.append(_GRAPE_ALIAS.get(tok, tok))
+    return [t for t in out if t]
+
+
+def _wine_color_tokens(*texts) -> list:
+    """Тексты (``wine_type``/``color``/доп.) -> канонические токены цвета."""
+    out = set()
+    for text in texts:
+        s = (text or '').lower()
+        for k, v in _COLOR_WORDS.items():
+            if re.search(r'\b' + re.escape(k) + r'\b', s):
+                out.add(v)
+    return sorted(out)
+
+
+def _wine_sweet_tokens(*texts) -> list:
+    """Тексты (``wine_type``/``sugar``/доп.) -> токены сладости/типа (сухое/брют/...)."""
+    out = set()
+    for text in texts:
+        s = (text or '').lower()
+        for k, v in _SWEET_WORDS.items():
+            if re.search(r'\b' + re.escape(k) + r'\b', s):
+                out.add(v)
+    return sorted(out)
 
 
 def _wine_type_tokens(wine_type: str) -> list:
-    """wine_type (LLM) -> канонические токены цвета + сладости."""
-    s = (wine_type or '').lower()
-    out = set()
-    for k, v in _COLOR_WORDS.items():
-        if re.search(r'\b' + re.escape(k) + r'\b', s):
-            out.add(v)
-    for k, v in _SWEET_WORDS.items():
-        if re.search(r'\b' + re.escape(k) + r'\b', s):
-            out.add(v)
-    return sorted(out)
+    """wine_type (LLM) -> канонические токены цвета + сладости (объединение)."""
+    return sorted(set(_wine_color_tokens(wine_type)) | set(_wine_sweet_tokens(wine_type)))
+
+
+def _slug_color_tokens(slug: str) -> list:
+    """Из слага достаём канонические токены цвета."""
+    return sorted({_SLUG_COLOR[t] for t in slug.lower().split('-') if t in _SLUG_COLOR})
+
+
+def _slug_sweet_tokens(slug: str) -> list:
+    """Из слага достаём канонические токены сладости/типа."""
+    return sorted({_SLUG_SWEET[t] for t in slug.lower().split('-') if t in _SLUG_SWEET})
 
 
 def _slug_category_tokens(slug: str) -> list:
-    """Из слага достаём канонические токены цвета/сладости."""
-    out = set()
-    for t in slug.lower().split('-'):
-        if t in _SLUG_COLOR:
-            out.add(_SLUG_COLOR[t])
-        if t in _SLUG_SWEET:
-            out.add(_SLUG_SWEET[t])
-    return sorted(out)
+    """Цвет + сладость из слага (обратная совместимость с прежним полем category)."""
+    return sorted(set(_slug_color_tokens(slug)) | set(_slug_sweet_tokens(slug)))
 
 
 def _best_sim(tok: str, targets: list) -> float:
@@ -158,6 +311,26 @@ def _best_sim(tok: str, targets: list) -> float:
             best = max(best, 0.94)
             continue
         best = max(best, SequenceMatcher(None, tok, t).ratio())
+    return best
+
+
+def best_sim_ck(tok: str, targets: list, thresh: float) -> float:
+    """Как ``_best_sim``, но при провале сравнивает c/k-нормализованные формы.
+
+    В каталоге сорт пишется склейкой слов («Мускат Белый» -> ``muskatbelii``), а в
+    алиасах сортов — «английской» формой («Мускат» -> ``muscat``): токены не совпадают
+    ни точь-в-точь, ни подстрокой, и сорт обнулялся (кейс 96.61, отчёт 20).
+    """
+    best = _best_sim(tok, targets)
+    if best >= thresh:
+        return best
+    a = tok.replace('c', 'k')
+    for t in targets:
+        b = t.replace('c', 'k')
+        if a == b:
+            return 1.0
+        if len(a) >= 4 and len(b) >= 4 and (a in b or b in a):
+            best = max(best, 0.94)
     return best
 
 
@@ -175,12 +348,42 @@ def _sym_cover(a: list, b: list) -> float:
     return 0.5 * (_token_cover(a, b) + _token_cover(b, a))
 
 
+def _grape_overlap(qtok: list, ttok: list) -> float:
+    """F1 по МНОЖЕСТВУ сортов (купаж): exact set -> 1.0, 1 из 2 vs 2 -> 0.667.
+
+    Токены уже канонизированы через ``_GRAPE_ALIAS``.
+    """
+    if not qtok or not ttok:
+        return 0.0
+    sq, st = set(qtok), set(ttok)
+    inter = len(sq & st)
+    if not inter:
+        return 0.0
+    return 2.0 * inter / (len(sq) + len(st))
+
+
 # ---------------------------------------------------------------- промт извлечения
 _EXTRACTION_SCHEMA = (
-    "\n\nВерни СТРОГО JSON (без markdown, без текста вокруг) в формате:\n"
-    '{"year": "<год или null>", "winery": "<производитель или null>",\n'
-    ' "grape": "<сорта через запятую или null>", "wine_type": "<тип или null>",\n'
-    ' "additional_text": "<доп. текст или null>"}\n'
+    "\n\nПрочитай этикетку МАКСИМАЛЬНО внимательно. КЛЮЧЕВЫЕ поля — сорт винограда "
+    "(grape, включая купаж), цвет (color), сахар (sugar), название ЛИНЕЙКИ (line) и "
+    "класс вина (sparkling): именно по ним различаются вина одной винодельни. "
+    "Год (year) — вторичен, его можно не указывать, если не виден. "
+    "Не угадывай: если не видно — null.\n"
+    "ВАЖНО: «игристое/шампанское» — это НЕ цвет, а КЛАСС вина (см. sparkling). "
+    "Цвет (color) — только красное/белое/розовое (даже у игристого: брют розовый -> розовое).\n"
+    "Верни СТРОГО JSON (без markdown, без текста вокруг) в формате:\n"
+    '{"winery": "<производитель (винодельня/бренд), ОБЯЗАТЕЛЬНО, или null>",\n'
+    ' "grape": "<сорта через запятую, напр. \\"Каберне Совиньон, Мерло\\", или null>",\n'
+    ' "color": "<красное|белое|розовое или null>",\n'
+    ' "sugar": "<сухое|полусухое|полусладкое|сладкое|брют или null>",\n'
+    ' "sparkling": "<игристое|шампанское|тихое>",\n'
+    ' "line": "<название линейки/серии, напр. Viva / Velvet Season, или null>",\n'
+    ' "wine_type": "<цвет и тип одной строкой, напр. \\"красное сухое\\", или null>",\n'
+    ' "additional_text": "<прочий текст (объём, крепость) или null>",\n'
+    ' "year": "<год урожая, 4 цифры, или null>",\n'
+    ' "raw_text": "<вся читаемая транскрипция этикетки одной строкой>",\n'
+    ' "field_confidence": {"winery": <0..1>, "grape": <0..1>, "color": <0..1>,'
+    ' "sugar": <0..1>, "sparkling": <0..1>, "line": <0..1>}}\n'
 )
 
 
@@ -191,8 +394,10 @@ def build_extraction_prompt(prompt_file) -> str:
     text = path.read_text(encoding='utf-8') if path.is_file() else ''
     if not text:
         text = ("Прочитай этикетку винной бутылки на ТЕКУЩЕМ фото и извлеки из неё данные: "
-                "год, производитель и марка вина, сорт винограда, тип вина "
-                "(сухое/брют/полусладкое/полусухое), дополнительный текст.")
+                "сорт винограда (включая купаж), цвет (красное/белое/розовое), "
+                "сахар (сухое/полусухое/полусладкое/сладкое/брют), "
+                "класс вина (игристое/шампанское/тихое — это НЕ цвет), "
+                "название линейки, производитель, год урожая (необязательно).")
     for marker in ('Сравни извлечённые', 'Сравни извлеченные', '1. Сравни'):
         idx = text.find(marker)
         if idx != -1:
@@ -218,13 +423,36 @@ class OcrExtractor:
         img.convert('RGB').save(buf, 'JPEG', quality=92)
         return 'data:image/jpeg;base64,' + base64.b64encode(buf.getvalue()).decode()
 
+    def prepare(self, img):
+        """Кроп этикетки -> изображение для VLM: апскейл мелкого текста + ограничение размера.
+
+        Наклонный/мелкий текст этикетки читается только после апскейла, но
+        гигантский JPEG бьёт по токенам и латентности — держим окно
+        ``min_side`` .. ``max_side`` (0 — не трогать).
+        """
+        img = img.convert('RGB')
+        w, h = img.size
+        if not w or not h:
+            return img
+        min_side = float(getattr(self.cfg, 'min_side', 0) or 0)
+        max_side = float(getattr(self.cfg, 'max_side', 0) or 0)
+        side = min(w, h)
+        if min_side and side < min_side:
+            scale = min_side / float(side)
+        elif max_side and max(w, h) > max_side:
+            scale = max_side / float(max(w, h))
+        else:
+            return img
+        size = (max(1, int(round(w * scale))), max(1, int(round(h * scale))))
+        return img.resize(size, Image.LANCZOS)
+
     def extract(self, img) -> dict:
         if not self.api_key:
             return {'error': 'no_api_key', 'fields': {}}
         messages = [{
             'role': 'user',
             'content': [
-                {'type': 'image_url', 'image_url': {'url': self._data_url(img)}},
+                {'type': 'image_url', 'image_url': {'url': self._data_url(self.prepare(img))}},
                 {'type': 'text', 'text': self.prompt},
             ],
         }]
@@ -250,7 +478,9 @@ class OcrExtractor:
                     time.sleep(2 ** attempt)
                     last = RuntimeError(f'HTTP {r.status_code}: {r.text[:300]}')
                     continue
-                if r.status_code in (400, 401, 403, 404):
+                if r.status_code in (400, 401, 402, 403, 404):
+                    # 402 — кончились кредиты OpenRouter, 401/403 — ключ/доступ: ретраить
+                    # бессмысленно (раньше 402 попадал в retry и жёг время на каждом фото).
                     last = RuntimeError(f'OpenRouter HTTP {r.status_code}: {r.text[:300]}')
                     break
                 r.raise_for_status()
@@ -280,16 +510,43 @@ class OcrExtractor:
                 data = json.loads(t[s:e + 1])
             else:
                 data = {}
-        keys = ('year', 'winery', 'grape', 'wine_type', 'additional_text')
-        return {k: ('' if data.get(k) is None else str(data[k]).strip()) for k in keys}
+        keys = ('year', 'winery', 'grape', 'color', 'sugar', 'line', 'sparkling',
+                'wine_type', 'additional_text', 'raw_text', 'field_confidence')
+        out = {}
+        for k in keys:
+            v = data.get(k)
+            if isinstance(v, (dict, list)):
+                v = json.dumps(v, ensure_ascii=False)
+            s = '' if v is None else str(v).strip()
+            if s.lower() in ('null', 'none', 'nan', 'нет', 'не указано', 'не найдено', '-'):
+                s = ''
+            out[k] = s
+        return out
 
 
 # ---------------------------------------------------------------- мэтчинг по референсному CSV
+def _cfg_weight(weights, key: str, *aliases, default: float = 0.0) -> float:
+    """Вес поля из конфига с алиасами (совместимость старых конфигов).
+
+    Напр. ``color``/``wine_type`` могут браться из старого общего ``category``.
+    """
+    for k in (key,) + aliases:
+        try:
+            if k in weights:
+                return float(weights[k])
+        except TypeError:                       # plain-dict без __contains__-семантики
+            if isinstance(weights, dict) and k in weights:
+                return float(weights[k])
+    return default
+
+
 class CsvMatcher:
     """Самописный (без модели) поиск по параметрам вина в found_in_catalog_corrected.csv.
 
-    Важность полей (веса, по убыванию): винодельня > категория > сорт > год > доп.текст.
-    Год учитывается только когда у одной основы слага есть несколько винтажей.
+    Поля и веса (по убыванию важности): винодельня > сорт ≈ год ≈ цвет ≈
+    тип (сладость) > доп. текст. Цвет, тип и год — дискриминаторы near-dup
+    «сестёр» одной линейки, поэтому весят высоко. Год учитывается ВСЕГДА
+    (``year_only_if_vintage_conflict: false``): он и различает винтажи.
     """
 
     FIELDS = ('Название вина', 'Категория', 'Цвет', 'Регион', 'Сорт винограда',
@@ -297,10 +554,12 @@ class CsvMatcher:
 
     def __init__(self, cfg):
         self.cfg = cfg.csv_match
+        self._root_cfg = cfg            # корневой конфиг: путь к файлу обогащения (paths.*)
         with open(cfg.paths.reference_csv, encoding='utf-8-sig', newline='') as f:
             rows = list(csv.DictReader(f, delimiter=';'))
         self.entries = []
         self._by_base = {}
+        self._by_slug = {}
         seen = set()
         for r in rows:
             slug = (r.get('Slug') or '').strip()
@@ -321,64 +580,249 @@ class CsvMatcher:
                 'color': (r.get('Цвет') or '').strip(),
                 'photo_file': (r.get('photo_file') or '').strip(),
                 'base_key': '-'.join(base),
-                'year': year_digit or title_year,
+                'year': year_code(year_digit) or year_code(title_year) or year_from_text(title),
                 'winery_tok': _norm_tokens(r.get('Винодельня')),
                 'grape_tok': _grape_tokens(r.get('Сорт винограда')),
                 'title_tok': _norm_tokens(title),
                 'slug_tok': _norm_tokens(slug.replace('-', ' ')),
-                'cat_tok': _wine_type_tokens((r.get('Категория') or '') + ' ' +
-                                             (r.get('Цвет') or ''))
-                             + _slug_category_tokens(slug),
+                'color_tok': sorted(set(_wine_color_tokens(r.get('Цвет'), r.get('Категория'))
+                                       + _shade_color_tokens(r.get('Цвет'))
+                                       + _slug_color_tokens(slug))),
+                'sweet_tok': sorted(set(_wine_sweet_tokens(r.get('Категория'), title)
+                                        + _slug_sweet_tokens(slug))),
+                'cat_tok': _slug_category_tokens(slug),
+                # класс вина: игристое/шампанское ⟷ тихое (маркеры в названии/слаге)
+                'spark_tok': (sorted(set(_wine_sparkling_tokens(title, slug.replace('-', ' '))
+                                         + _slug_spark_tokens(slug))) or ['still']),
             }
             self.entries.append(e)
+            self._by_slug[slug] = e
             self._by_base.setdefault(e['base_key'], []).append(e['slug'])
+        # словарь сортов каталога: по нему фильтруем сорт, вытащенный из доп. текста
+        self.grape_vocab = {t for e in self.entries for t in e['grape_tok']}
+        self.grape_from_text = bool(getattr(self.cfg, 'grape_from_text', False))
+        self.grape_contain = bool(getattr(self.cfg, 'grape_contain', False))
+        self.fuzzy_ck_norm = bool(getattr(self.cfg, 'fuzzy_ck_norm', False))
+        self._apply_enrichment(str(getattr(self.cfg, 'enrichment_file', '') or ''))
+
+    def _enr_path(self, path: str):
+        """Какой файл обогащения читать: auto / выключено / явный путь.
+
+        - ``auto`` (значение конфига) — ``paths.catalog_ocr_fields``: в Docker это
+          ``/app/ref/...``, на хосте ``apply_host_paths`` переписывает его в
+          ``<repo>/data/...`` (как ``reference_csv``);
+        - ``""`` / ``none`` — обогащение выключено;
+        - иначе — путь как есть, либо относительно КОРНЯ репозитория (удобно для
+          харнессов: ``--enrich data/catalog_ocr_fields.csv``).
+        """
+        if path in ('', 'none'):
+            return None
+        if path == 'auto':
+            paths = getattr(self._root_cfg, 'paths', None)
+            cand = str(getattr(paths, 'catalog_ocr_fields', '') or '') if paths else ''
+            if not cand:
+                print('[csv_match] enrichment_file=auto, но paths.catalog_ocr_fields пуст',
+                      flush=True)
+                return None
+            p = Path(cand)
+        else:
+            p = Path(path)
+        if not p.is_absolute():
+            p = REPO / p
+        if not p.is_file():
+            print(f'[csv_match] enrichment_file не найден: {p}', flush=True)
+            return None
+        return p
+
+    def _enr_consistent(self, e: dict, r: dict) -> bool:
+        """Согласован ли прочитанный бренд с записью каталога (защита от мусора).
+
+        Часть каталожных фото VLM читает неверно (`pobeda` -> «Mancopia/Riesling»,
+        `rubin-golodrigi` -> «CR»): если бренд не подтверждается ни полем «Винодельня»,
+        ни названием, ни слагом записи — данные такого фото не подмешиваем.
+        """
+        w = _norm_tokens(r.get('winery'))
+        if not w:
+            return True
+        ref = sorted(set(e['winery_tok']) | set(e['title_tok']) | set(e['slug_tok']))
+        return _token_cover(w, ref, 0.72) >= 0.5
+
+    def _apply_enrichment(self, path: str) -> int:
+        """Дополнить записи каталога полями OCR-разметки каталожных фото (отчёт 21).
+
+        Исходную разметку организаторов НЕ меняем: поля только добавляются к токенам
+        записи (сорт/линейка/сахар) и заполняется пустой год. Файл создаётся
+        `ML evaluation/catalog_ocr.py` (`data/catalog_ocr_fields.csv`).
+        """
+        if not path:
+            return 0
+        p = self._enr_path(path)
+        if p is None:
+            return 0
+        n, skipped = 0, 0
+        with open(p, encoding='utf-8-sig', newline='') as f:
+            for r in csv.DictReader(f, delimiter=';'):
+                e = self._by_slug.get((r.get('slug') or '').strip())
+                if e is None:
+                    continue
+                if not self._enr_consistent(e, r):
+                    skipped += 1
+                    continue
+                grape = _grape_tokens(r.get('grape'))
+                if grape:
+                    e['grape_tok'] = sorted(set(e['grape_tok']) | set(grape))
+                sweet = _wine_sweet_tokens(r.get('sugar'), r.get('wine_type'))
+                if sweet:
+                    e['sweet_tok'] = sorted(set(e['sweet_tok']) | set(sweet))
+                line = _norm_tokens(r.get('line'))
+                if line:
+                    e['title_tok'] = sorted(set(e['title_tok']) | set(line))
+                if not e['year']:
+                    e['year'] = year_code(r.get('year'))
+                n += 1
+        self.grape_vocab = {t for e in self.entries for t in e['grape_tok']}
+        print(f'[csv_match] обогащение из {p.name}: {n} записей '
+              f'(пропущено {skipped} — бренд не подтвердился)', flush=True)
+        return n
 
     def _year_conflict(self, e: dict) -> bool:
         """True, если в базе есть то же вино в разных винтажах (одна основа слага)."""
         return len(self._by_base.get(e['base_key'], [])) > 1
 
-    def match(self, fields: dict) -> list:
-        """fields -> отсортированный список [{slug, confidence, breakdown}]."""
+    # Поля-дискриминаторы в порядке значимости для near-dup «сестёр».
+    _FIELDS = ('winery', 'grape', 'color', 'wine_type', 'line', 'sparkling',
+               'year', 'additional_text')
+
+    def _query(self, fields: dict) -> dict:
+        """Нормализованные значения запроса по полям каталога (пустые — None).
+
+        При ``grape_from_text`` сорт добирается из ``additional_text``/``raw_text``
+        (VLM часто пишет туда сорт, который не опознал как поле ``grape``: «Рубин»,
+        «Цитрон 2024»). Добираем ТОЛЬКО токены, которые есть в словаре сортов
+        каталога, — иначе в сорт попадал бы мусор («Тираж», «Год урожая»).
+        """
+        q = {
+            'winery': _norm_tokens(fields.get('winery')) or None,
+            'grape': _grape_tokens(fields.get('grape')) or None,
+            'color': _wine_color_tokens(fields.get('color'), fields.get('wine_type')) or None,
+            'wine_type': _wine_sweet_tokens(fields.get('sugar'), fields.get('wine_type')) or None,
+            # класс вина: игристое/шампанское ⟷ тихое (НЕ цвет!)
+            'sparkling': _wine_sparkling_tokens(fields.get('sparkling')) or None,
+            # линейка/название: явное поле line, иначе доп. текст (напр. "Velvet Season")
+            'line': (_norm_tokens(fields.get('line'))
+                     or _norm_tokens(fields.get('additional_text'))) or None,
+            # год: явное поле LLM, иначе 4-значный год в доп. тексте / типе
+            'year': (year_code(fields.get('year'))
+                     or year_from_text(fields.get('additional_text'),
+                                       fields.get('wine_type'))) or None,
+            'additional_text': _norm_tokens(fields.get('additional_text')) or None,
+        }
+        if self.grape_from_text and not q.get('grape'):
+            extra = []
+            for key in ('additional_text', 'raw_text'):
+                extra += _grape_tokens(fields.get(key))
+            extra = sorted({t for t in extra if t in self.grape_vocab})
+            if extra:
+                q['grape'] = extra
+        return q
+
+    def _field_sim(self, key: str, qval, e: dict, thresh: float,
+                   only_if_conflict: bool):
+        """Сходство запроса и записи по одному полю.
+
+        Возвращает float либо ``None``, если у записи НЕТ данных по этому полю
+        (тогда поле считается нейтральным: ``missing_credit``, а не 0 и не 1).
+        """
+        if key == 'winery':
+            # в каталоге иногда винодельня не заполнена, но бренд есть в слаге
+            return max(_sym_cover(qval, e['winery_tok']),
+                       0.85 * _sym_cover(qval, e['slug_tok']))
+        if key == 'grape':
+            if not e['grape_tok']:
+                return None
+            # купаж: F1 по множеству сортов (exact set -> 1.0, частичное -> ниже),
+            # плюс (grape_contain) «покрытие запроса»: VLM читает 1-2 сорта из купажа,
+            # и F1 штрафовал правильную запись за «лишние» сорта сильнее, чем односортную
+            # запись-«близнеца» (отчёты 19/20: 84.73, 87.09, 96.61).
+            sim = max(_grape_overlap(qval, e['grape_tok']),
+                      0.8 * _sym_cover(qval, e['slug_tok']))
+            if self.grape_contain:
+                cov = (max(best_sim_ck(q, e['grape_tok'], thresh) for q in qval)
+                       if self.fuzzy_ck_norm else _token_cover(qval, e['grape_tok'], thresh))
+                sim = max(sim, cov)
+            return sim
+        if key == 'color':
+            return _token_cover(qval, e['color_tok'], thresh) if e['color_tok'] else None
+        if key == 'wine_type':
+            return _token_cover(qval, e['sweet_tok'], thresh) if e['sweet_tok'] else None
+        if key == 'sparkling':
+            # класс: игристое/шампанское ⟷ тихое (spark_tok всегда непустой)
+            return _token_cover(qval, e.get('spark_tok') or [], thresh)
+        if key == 'year':
+            if not e['year']:
+                return None
+            # в режиме конфликта год учитываем только у «сестёр» по основе слага
+            if only_if_conflict and not self._year_conflict(e):
+                return None
+            return year_sim(e['year'], qval)
+        if key == 'additional_text':
+            if not (e['title_tok'] or e['slug_tok']):
+                return None
+            return max(_token_cover(qval, e['title_tok'], thresh),
+                       0.7 * _token_cover(qval, e['slug_tok'], thresh))
+        if key == 'line':
+            # линейка/название: токены line ⟷ title+slug записи
+            if not (e['title_tok'] or e['slug_tok']):
+                return None
+            return max(_token_cover(qval, e['title_tok'], thresh),
+                       0.7 * _token_cover(qval, e['slug_tok'], thresh))
+        return None
+
+    def match(self, fields: dict, only=None) -> list:
+        """fields -> отсортированный список [{slug, confidence, breakdown}].
+
+        ``only`` — необязательный список slug'ов: считать только по ним
+        (re-rank короткого списка retrieval, см. ``rerank``). Это ключевой
+        режим: искать по всем 2108 записям каталога заметно слабее, чем
+        переупорядочить top-k retrieval, где правильный ответ почти всегда уже
+        есть.
+
+        Ключевое отличие от «наивного» fuzzy-матчинга: нормировка идёт на
+        ФИКСИРОВАННЫЙ набор полей, заданный ЗАПРОСОМ (одинаковый для всех
+        кандидатов), а не на «поля, которые нашлись у записи». Иначе запись без
+        данных (напр. ``balaklava-muskat`` без цвета/типа) получала искусственно
+        высокую уверенность только потому, что штрафные поля у неё отсутствуют.
+        Отсутствующее у записи поле даёт ``missing_credit`` (по умолчанию 0.5) —
+        нейтрально: не награждает и не обнуляет.
+        """
         w = self.cfg.weights
         thresh = float(self.cfg.token_thresh)
-        winery_q = _norm_tokens(fields.get('winery'))
-        grape_q = _grape_tokens(fields.get('grape'))
-        add_q = _norm_tokens(fields.get('additional_text'))
-        wtype_q = _wine_type_tokens(fields.get('wine_type'))
-        year_q = re.sub(r'\D', '', str(fields.get('year') or ''))
-        year_q = year_q if len(year_q) == 4 else ''
+        credit = float(getattr(self.cfg, 'missing_credit', 0.5))
+        only_if_conflict = bool(getattr(self.cfg, 'year_only_if_vintage_conflict', False))
+        q = self._query(fields)
+        active = [k for k in self._FIELDS if q.get(k)]
+        if not active:
+            return []
+        weights = {k: _cfg_weight(w, k, 'category' if k in ('color', 'wine_type') else k)
+                   for k in active}
+        tot_w = sum(weights.values())
+        if tot_w <= 0:
+            return []
+
+        if only is None:
+            entries = self.entries
+        else:
+            entries = [self._by_slug[s] for s in dict.fromkeys(only) if s in self._by_slug]
 
         results = []
-        for e in self.entries:
+        for e in entries:
             part, detail = {}, {}
-            if winery_q:
-                part['winery'] = max(_sym_cover(winery_q, e['winery_tok']),
-                                     0.85 * _sym_cover(winery_q, e['slug_tok']))
-                detail['winery'] = round(part['winery'], 3)
-            if wtype_q:
-                pool = e['cat_tok'] + e['slug_tok']
-                cover = _token_cover(wtype_q, pool, thresh)
-                part['category'] = cover
-                detail['category'] = round(cover, 3)
-            if grape_q:
-                part['grape'] = max(_sym_cover(grape_q, e['grape_tok']),
-                                    0.8 * _sym_cover(grape_q, e['slug_tok']))
-                detail['grape'] = round(part['grape'], 3)
-            if add_q:
-                part['additional_text'] = max(
-                    _token_cover(add_q, e['title_tok'], thresh),
-                    0.7 * _token_cover(add_q, e['slug_tok'], thresh))
-                detail['additional_text'] = round(part['additional_text'], 3)
-            # год — только при конфликте винтажей
-            if year_q and (not self.cfg.year_only_if_vintage_conflict
-                           or self._year_conflict(e)):
-                part['year'] = 1.0 if year_q == e['year'] else 0.0
-                detail['year'] = part['year']
-            if not part:
-                continue
-            tot_w = sum(float(w[k]) for k in part)
-            conf = sum(float(w[k]) * v for k, v in part.items()) / tot_w
-            results.append({'slug': e['slug'], 'confidence': round(conf, 4),
+            for k in active:
+                sim = self._field_sim(k, q[k], e, thresh, only_if_conflict)
+                part[k] = credit if sim is None else sim
+                detail[k] = round(part[k], 3)
+            wsum = sum(weights[k] * part[k] for k in active)
+            results.append({'slug': e['slug'], 'confidence': round(wsum / tot_w, 4),
                             'photo_file': e['photo_file'],
                             'year': e['year'], 'breakdown': detail})
         results.sort(key=lambda x: -x['confidence'])
@@ -409,7 +853,6 @@ class VisualVerifier:
         ref_path = self._ref_path(photo_file, slug)
         if not ref_path.exists():
             return 0.0
-        from PIL import Image
         ref = Image.open(ref_path).convert('RGB')
         if self.crop_fn is not None:
             try:
@@ -422,57 +865,206 @@ class VisualVerifier:
 
 
 # ---------------------------------------------------------------- оркестрация rerank
+def _candidates_payload(candidates: list, n: int = 3) -> list:
+    """Компактный top-N кандидатов для отчёта/ответа API."""
+    return [{'slug': c['slug'], 'confidence': c['confidence'],
+             'year': c.get('year'), 'breakdown': c.get('breakdown')}
+            for c in candidates[:n]]
+
+
+def decide(cfg, candidates: list, pre_ocr_slug, min_conf: float) -> dict:
+    """Гейт «оставить retrieval или заменить на CSV-ответ» (чистая функция).
+
+    Сравнение идёт в ОДНОЙ шкале: CSV-уверенность лучшего кандидата против
+    CSV-уверенности действующего ответа retrieval (обе — доля покрытия полей от
+    фиксированного набора, заданного запросом; см. ``CsvMatcher.match``).
+
+    Прежний гейт (``csv_conf`` против косинуса SigLIP 0.7–0.85) сравнивал разные
+    шкалы и блокировал OCR почти всегда; гейт «по разрыву top1/top2 внутри CSV»
+    мог выбрать «сестру» вместо ответа retrieval. Здесь нужен явный ЗАПАС над
+    incumbent'ом.
+
+    Возвращает dict с ``final_slug``/``reason``/``switched`` и диагностикой.
+    """
+    if not candidates:
+        return {'final_slug': pre_ocr_slug, 'reason': 'no_csv_match', 'switched': False,
+                'top_candidates': []}
+    top = candidates[0]
+    csv_conf = float(top['confidence'])
+    retr_conf = next((float(c['confidence']) for c in candidates
+                      if c['slug'] == pre_ocr_slug), 0.0)
+    margin = round(csv_conf - retr_conf, 4)
+    second_conf = float(candidates[1]['confidence']) if len(candidates) > 1 else 0.0
+    extra = {'csv_confidence': csv_conf, 'csv_margin': margin,
+             'retrieval_csv_confidence': round(retr_conf, 4),
+             'second_csv_confidence': second_conf,
+             'top_candidates': _candidates_payload(candidates)}
+
+    if top['slug'] == pre_ocr_slug:
+        return {'final_slug': pre_ocr_slug, 'reason': 'csv_agrees', 'switched': False, **extra}
+
+    need = float(getattr(cfg.csv_match, 'decision_margin', 0.05))
+    if csv_conf < float(min_conf):
+        return {'final_slug': pre_ocr_slug, 'reason': 'low_csv_confidence',
+                'switched': False, **extra}
+    if margin < need:
+        return {'final_slug': pre_ocr_slug, 'reason': 'csv_ambiguous',
+                'switched': False, **extra}
+    return {'final_slug': top['slug'], 'reason': 'csv_decisive', 'switched': True, **extra}
+
+
+def _shortlist(matcher, pre_ocr_slug, pre_ocr_candidates) -> list:
+    """Кандидаты для OCR-re-rank: ответ retrieval + его top-k + «сёстры» по основе.
+
+    Искать по всему каталогу (2108 записей) слабо: правильный ответ почти всегда
+    уже в top-k retrieval, а лишние кандидаты только создают ложные «ничьи».
+    Поэтому OCR-мэтч работает как re-rank короткого списка.
+    """
+    out = []
+    if pre_ocr_slug:
+        out.append(pre_ocr_slug)
+    for s in (pre_ocr_candidates or []):
+        if s:
+            out.append(s)
+    if pre_ocr_slug:
+        base, _ = parse_slug(pre_ocr_slug)
+        out.extend(matcher._by_base.get('-'.join(base), []))
+    return list(dict.fromkeys(out))
+
+
+def _fields_poor(fields: dict, vocab: set) -> bool:
+    """Похоже, что VLM прочитал кроп плохо -> стоит перечитать по кропу бутылки.
+
+    Триггеры (отчёты 19/20): детектор этикетки обрезал надписи, rectify «зуммит» и
+    теряет строку сорта, либо в кропе вообще нет текста и модель выдумывает сорт
+    (`94.02`, `95.63`, `87.54`).
+    """
+    winery = (fields.get('winery') or '').strip()
+    grape = (fields.get('grape') or '').strip()
+    line = (fields.get('line') or '').strip()
+    if not winery and not grape:
+        return True
+    if not grape:
+        return True                      # сорт не прочитан -> кроп, вероятно, обрезан
+    toks = _grape_tokens(grape)
+    if toks and vocab and not any(_best_sim(t, list(vocab)) >= 0.8 for t in toks):
+        return True                      # сорт, которого нет в каталоге (галлюцинация)
+    return False
+
+
+def _merge_fields(a: dict, b: dict, vocab: set) -> dict:
+    """Слияние полей двух проходов: непустые из первого, добор из второго.
+
+    Сорт: если в первом проходе его нет или он не из словаря каталога, берём вариант
+    второго прохода (он читался по кропу бутылки).
+    """
+    out = dict(a)
+    for k, v in (b or {}).items():
+        if not (v or '').strip():
+            continue
+        if not (out.get(k) or '').strip():
+            out[k] = v
+    ga = _grape_tokens(out.get('grape'))
+    gb = _grape_tokens((b or {}).get('grape'))
+    if gb and (not ga or not any(_best_sim(t, list(vocab)) >= 0.8 for t in ga)):
+        out['grape'] = (b or {}).get('grape')
+    return out
+
+
 def rerank(cfg, query_image, query_crop, pre_ocr_slug, pre_ocr_score,
-           extractor, matcher, verifier) -> dict:
+           extractor, matcher, verifier, ocr_image=None, pre_ocr_candidates=None,
+           bottle_crop=None) -> dict:
     """Решение: оставить retrieval-ответ или заменить его на OCR/CSV-ответ.
 
-    Порядок: извлечь поля (1 вызов модели) -> самописный мэтчинг по CSV -> если
-    уверенность CSV > уверенности модели до OCR -> визуальная проверка фото каталога.
+    Порядок: извлечь поля (1 вызов модели по ВЫПРЯМЛЕННОМУ кропу этикетки) ->
+    самописный мэтчинг по CSV в пределах короткого списка retrieval -> решение
+    «CSV-кандидат против CSV-ответа retrieval».
+
+    Гейт сравнивает ДВЕ CSV-уверенности (обе — доля покрытия токенов, 0–1) на
+    одной шкале: OCR-ответ побеждает, только если его CSV-скор выше скора
+    текущего retrieval-ответа на ``decision_margin``. Прежний гейт
+    (``csv_conf`` против косинуса SigLIP 0.7–0.85) сравнивал разные шкалы и
+    блокировал OCR почти всегда; гейт по разрыву внутри CSV top1/top2 всё ещё
+    мог выбрать «сестру» вместо ответа retrieval.
+
+    ``ocr_image`` — изображение для VLM (выпрямленный кроп этикетки); если не
+    задано, берётся ``query_crop`` при ``ocr.use_label_crop`` иначе ``query_image``.
+    ``query_crop`` по-прежнему идёт в визуальную проверку (как препроцесс индекса).
+    ``pre_ocr_candidates`` — slug'и short-list'а retrieval (best-first).
     """
     base = {'pre_ocr_slug': pre_ocr_slug, 'pre_ocr_score': round(float(pre_ocr_score), 4)}
     if not cfg.ocr.enabled:
         return {**base, 'final_slug': pre_ocr_slug, 'stage': 'retrieval',
                 'reason': 'ocr_disabled'}
 
+    if ocr_image is None and bool(getattr(cfg.ocr, 'use_label_crop', True)):
+        ocr_image = query_crop
+    if ocr_image is None:
+        ocr_image = query_image
+    ocr_input = 'label_crop' if ocr_image is not query_image else 'full_image'
+
     try:
-        ocr = extractor.extract(query_image)
+        ocr = extractor.extract(ocr_image)
     except Exception as e:  # noqa: BLE001 — OCR не должен ронять пайплайн
         ocr = {'error': f'ocr_exception: {e}', 'fields': {}}
     fields = ocr.get('fields', {})
     if not fields or not any((v or '').strip() for v in fields.values()):
         return {**base, 'final_slug': pre_ocr_slug, 'stage': 'retrieval',
-                'reason': 'ocr_empty', 'ocr_error': ocr.get('error')}
+                'reason': 'ocr_empty', 'ocr_error': ocr.get('error'),
+                'ocr_input': ocr_input}
 
-    candidates = matcher.match(fields)
+    # Страховка на случай ошибки детектора этикетки / rectify: если поля бедные или
+    # сорт не из каталога — читаем ещё раз по КРОПУ БУТЫЛКИ и сливаем поля.
+    retry_info = None
+    if (bottle_crop is not None and bool(getattr(cfg.ocr, 'retry_on_poor_fields', False))
+            and _fields_poor(fields, matcher.grape_vocab)):
+        try:
+            second = extractor.extract(bottle_crop)
+            fields2 = second.get('fields', {})
+            if fields2:
+                fields = _merge_fields(fields, fields2, matcher.grape_vocab)
+                ocr_input = f'{ocr_input}+bottle_crop'
+                retry_info = {'retry_reason': 'poor_fields',
+                              'retry_fields': fields2}
+        except Exception as e:  # noqa: BLE001 — страховка не должна ронять пайплайн
+            print(f'[ocr] retry on bottle crop failed: {e}', flush=True)
+
+    shortlist = _shortlist(matcher, pre_ocr_slug, pre_ocr_candidates)
+    only = shortlist if (shortlist and bool(getattr(cfg.csv_match, 'shortlist_only', True))) \
+        else None
+    candidates = matcher.match(fields, only=only)
+    min_conf = max(float(cfg.ocr.min_confidence), float(cfg.csv_match.min_score))
     if not candidates:
         return {**base, 'final_slug': pre_ocr_slug, 'stage': 'retrieval',
-                'reason': 'no_csv_match', 'ocr_fields': fields, 'top_candidates': []}
+                'reason': 'no_csv_match', 'ocr_fields': fields, 'ocr_input': ocr_input,
+                'shortlist_size': len(shortlist), 'top_candidates': [],
+                **(retry_info or {})}
 
+    decision = decide(cfg, candidates, pre_ocr_slug, min_conf)
+    csv_extra = {'shortlist_size': len(shortlist), 'ocr_fields': fields,
+                 'ocr_input': ocr_input, **(retry_info or {}),
+                 **{k: v for k, v in decision.items()
+                    if k not in ('final_slug', 'switched')}}
+
+    if not decision['switched']:
+        return {**base, 'final_slug': pre_ocr_slug, 'stage': 'retrieval',
+                'reason': decision['reason'], **csv_extra}
+
+    # ---- OCR предлагает ДРУГОГО кандидата и выиграл гейт: мягкая визуальная проверка
     top = candidates[0]
-    csv_conf = top['confidence']
-    min_conf = max(float(cfg.ocr.min_confidence), float(cfg.csv_match.min_score))
-    if csv_conf < min_conf:
-        return {**base, 'final_slug': pre_ocr_slug, 'stage': 'retrieval',
-                'reason': 'low_csv_confidence', 'csv_confidence': csv_conf,
-                'ocr_fields': fields, 'top_candidates': candidates[:3]}
-
-    # «скор поиска по csv более значим, чем уверенность ответа модели до OCR»
-    if csv_conf <= pre_ocr_score + float(cfg.visual.confidence_margin):
-        return {**base, 'final_slug': pre_ocr_slug, 'stage': 'retrieval',
-                'reason': 'csv_conf_not_higher', 'csv_confidence': csv_conf,
-                'ocr_fields': fields, 'top_candidates': candidates[:3]}
-
     vis = 1.0
     if cfg.visual.enabled:
-        vis = verifier.verify(query_crop, top['photo_file'], top['slug'])
+        try:
+            vis = verifier.verify(query_crop, top['photo_file'], top['slug'])
+        except Exception as e:  # noqa: BLE001 — визуал не должен ронять пайплайн
+            print(f'[ocr] visual verify failed: {e}', flush=True)
+            vis = 1.0
+    vis_ok = (not cfg.visual.enabled) or (vis >= float(cfg.visual.min_similarity))
+    csv_extra['visual_similarity'] = round(vis, 4)
+    if not vis_ok and bool(getattr(cfg.visual, 'block_on_mismatch', False)):
+        return {**base, 'final_slug': pre_ocr_slug, 'stage': 'retrieval',
+                'reason': 'visual_mismatch', **csv_extra}
 
-    if vis >= float(cfg.visual.min_similarity):
-        return {**base, 'final_slug': top['slug'], 'stage': 'ocr_rerank',
-                'reason': 'visual_ok', 'csv_confidence': csv_conf,
-                'visual_similarity': round(vis, 4), 'ocr_fields': fields,
-                'top_candidates': candidates[:3]}
-
-    return {**base, 'final_slug': pre_ocr_slug, 'stage': 'retrieval',
-            'reason': 'visual_mismatch', 'csv_confidence': csv_conf,
-            'visual_similarity': round(vis, 4), 'ocr_fields': fields,
-            'top_candidates': candidates[:3]}
+    return {**base, 'final_slug': top['slug'], 'stage': 'ocr_rerank',
+            'reason': 'visual_ok' if vis_ok else 'csv_decisive_visual_weak',
+            **csv_extra}

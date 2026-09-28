@@ -15,6 +15,40 @@ services:
     ports:
       - "5432:5432"
 
+  # Разовая инициализация БД: если база пустая и есть дамп (deploy/fetch_data.sh кладёт его
+  # в deploy/archives/pgvector.dump) — восстанавливает векторы индекса, иначе просто выходит.
+  # ml ждёт завершения этого шага, поэтому гонки «индекс строится с нуля» не возникает.
+  db-init:
+    image: pgvector/pgvector:pg16
+    environment:
+      PGHOST: db
+      PGPORT: "5432"
+      PGUSER: vino
+      PGPASSWORD: vino
+      PGDATABASE: vino
+      DUMP_FILE: /deploy/archives/pgvector.dump
+    volumes:
+      - "./deploy:/deploy:ro"
+    entrypoint: ["sh", "/deploy/db_init.sh"]
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # Скачивание данных/моделей на сервере БЕЗ python3 на хосте: docker compose --profile fetch run --rm fetch
+  # (использует только стандартную библиотеку python, поэтому берём чистый python-образ).
+  fetch:
+    profiles: ["fetch"]
+    image: python:3.11-slim
+    working_dir: /app
+    volumes:
+      - "./deploy:/app/deploy"
+      - "./data:/app/data"
+      - "./filtered:/app/filtered"
+      - "./models:/app/models"
+    # entrypoint, а не command: тогда `docker compose --profile fetch run --rm fetch --check`
+    # передаёт аргументы в скрипт (например --check или --only data,dump)
+    entrypoint: ["python3", "/app/deploy/fetch_data.py"]
+
   ml:
     build:
       context: "./ML service"
@@ -41,12 +75,15 @@ services:
       - "./filtered:/app/filtered:ro"
       - "./models:/app/models"
       - "./config:/app/config:ro"
-      - "../data/found_in_catalog_reference:/app/ref:ro"
-      - "../code/prompts_wine_match.txt:/app/prompts_wine_match.txt:ro"
+      # каталог/эталоны — из репозитория (папка data внутри проекта, не ../data)
+      - "./data:/app/ref:ro"
+      - "./ML service/prompts_wine_match.txt:/app/prompts_wine_match.txt:ro"
       - hfcache:/models_cache
     depends_on:
       db:
         condition: service_healthy
+      db-init:
+        condition: service_completed_successfully
     ports:
       - "8080:8080"
 

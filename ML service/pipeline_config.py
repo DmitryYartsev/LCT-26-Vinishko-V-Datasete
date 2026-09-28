@@ -37,7 +37,31 @@ def apply_retrieval_env(cfg) -> None:
     os.environ['LABEL_MARGIN'] = str(r.label_margin)
     os.environ['LABEL_ALIGN'] = '1' if r.label_align else '0'
     os.environ['SEARCH_PIPELINE'] = str(r.pipeline)
+    # OCR-вход: что подаём VLM (crop.py: ocr_label_crop). align = историческое поведение.
+    o = cfg.ocr
+    os.environ['OCR_LABEL_CROP'] = str(getattr(o, 'label_crop', 'align'))
+    os.environ['LABEL_CROP_MIN_CONF'] = str(getattr(o, 'label_crop_min_conf', 0.45))
+    os.environ['LABEL_CROP_MIN_AREA'] = str(getattr(o, 'label_crop_min_area', 0.02))
+    os.environ['LABEL_CROP_MAX_ASPECT'] = str(getattr(o, 'label_crop_max_aspect', 3.0))
     os.environ['THRESH_SCORE'] = str(r.thresh_score)
     os.environ['THRESH_MARGIN'] = str(r.thresh_margin)
     os.environ['EVAL_ABSTAIN'] = '1' if r.eval_abstain else '0'
     os.environ['DATABASE_URL'] = str(r.database_url)
+    # политика кропа (аудит Reports/15_Crop_audit.md). Исторические значения по
+    # умолчанию: старые конфиги и уже собранный индекс остаются валидными.
+    os.environ['CROP_PICK'] = str(getattr(r, 'crop_pick', 'big_center'))
+    os.environ['CROP_FALLBACK'] = str(getattr(r, 'crop_fallback', 'orig'))
+    os.environ['CROP_MIN_AREA'] = str(getattr(r, 'crop_min_area', 0.0))
+    os.environ['LABEL_PICK'] = str(getattr(r, 'label_pick', 'conf'))
+    os.environ['LABEL_MIN_W_FRAC'] = str(getattr(r, 'label_min_w_frac', 0.0))
+    # Политика ТОЛЬКО для запроса (v3-рецепт аудита Reports/15_Crop_audit.md): индекс
+    # собирается `crop_*`, а кроп запроса — `query_crop_*` (crop.py: use_query_policy()).
+    # Пустое/отсутствующее значение = оверрайда нет, запрос идёт политикой индекса.
+    for key, env in (('query_crop_pick', 'QUERY_CROP_PICK'),
+                     ('query_crop_fallback', 'QUERY_CROP_FALLBACK'),
+                     ('query_crop_min_conf', 'QUERY_CROP_MIN_CONF'),
+                     ('query_crop_min_area', 'QUERY_CROP_MIN_AREA'),
+                     ('query_label_pick', 'QUERY_LABEL_PICK'),
+                     ('query_label_min_w_frac', 'QUERY_LABEL_MIN_W_FRAC')):
+        val = getattr(r, key, None)
+        os.environ[env] = '' if val is None else str(val)

@@ -50,6 +50,24 @@ def upsert_wines(conn, rows):
             [{k: r.get(k, "") for k in CARD_FIELDS} for r in rows])
 
 
+def prune_wines(conn, slugs) -> int:
+    """Удалить карточки и векторы слагов, которых больше нет в каталоге.
+
+    Нужно, когда слаг исключают из каталога (напр. `balaklava-muskat`, отчёт 20):
+    `upsert_wines` только добавляет/обновляет, поэтому без этого шага карточка
+    остаётся в БД, хотя векторов у неё уже нет.
+    """
+    keep = list(slugs)
+    with conn.cursor() as cur:
+        cur.execute("DELETE FROM wine_vectors WHERE NOT (slug = ANY(%s))", (keep,))
+        n_vec = cur.rowcount
+        cur.execute("DELETE FROM wines WHERE NOT (slug = ANY(%s))", (keep,))
+        n_cards = cur.rowcount
+    if n_cards or n_vec:
+        print(f"[prune] убрано карточек {n_cards}, векторов {n_vec}")
+    return n_cards
+
+
 def replace_vectors(conn, model: str, pairs, dim: int, backend: str):
     """pairs: список (slug, emb[np.float32]). Перезаливает вектора ТОЛЬКО этой модели."""
     conn.execute("DELETE FROM wine_vectors WHERE model=%s", (model,))

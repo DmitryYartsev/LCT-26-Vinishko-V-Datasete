@@ -20,12 +20,13 @@ DINOv2: CLS-токен last_hidden_state[:, 0] + L2 (у DINO именно CLS
 dim: dinov2-base 768 (= siglip2-base), large 1024. Вектора разных моделей
 сосуществуют в pgvector под разными `model`, индекс SigLIP не трогаем.
 """
-import os, io
+import os, io, base64
 import numpy as np
 from PIL import Image
 
 SIGLIP_DEFAULT = "google/siglip2-base-patch16-256"
 DINOV2_DEFAULT = "facebook/dinov2-base"
+OR_EMBED_DEFAULT = "voyageai/voyage-multimodal-3.5"
 
 ENCODER = os.environ.get("SEARCH_ENCODER", "auto").lower()   # siglip|dinov2|auto
 MODEL = os.environ.get("SEARCH_MODEL") or os.environ.get("SIGLIP_MODEL", SIGLIP_DEFAULT)
@@ -39,7 +40,12 @@ def _resolve_encoder_kind() -> str:
         return "dinov2"
     if ENCODER == "siglip":
         return "siglip"
-    if "dinov2" in MODEL.lower():
+    if ENCODER == "openrouter":
+        return "openrouter"
+    m = MODEL.lower()
+    if any(k in m for k in ("voyage", "gemini-embedding", "nemotron-embed")):
+        return "openrouter"
+    if "dinov2" in m:
         return "dinov2"
     return "siglip"
 
@@ -47,6 +53,8 @@ def _resolve_encoder_kind() -> str:
 KIND = _resolve_encoder_kind()
 if KIND == "dinov2" and ENCODER == "dinov2" and MODEL == SIGLIP_DEFAULT:
     MODEL = DINOV2_DEFAULT
+if KIND == "openrouter" and MODEL == SIGLIP_DEFAULT:
+    MODEL = OR_EMBED_DEFAULT
 
 
 def _to_pil(x):
@@ -152,12 +160,81 @@ class DinoV2Encoder:
         return _l2(np.concatenate(out, axis=0)).astype(np.float32)
 
 
+class OpenRouterEncoder:
+    """Мультимодальный эмбеддер через OpenRouter `/embeddings` (текст+картинка).
+
+    Модели: ``voyageai/voyage-multimodal-3.5`` (dim 1024), ``google/gemini-embedding-2``
+    (dim 3072), ``nvidia/llama-nemotron-embed-vl-1b-v2:free`` (dim 2048, бесплатно).
+    Картинка отправляется как base64 data-URL в ``input[].content[]``; батчинг —
+    несколько ``content``-объектов в одном запросе (проверено до 40 шт.).
+
+    ENV: ``OPENROUTER_API_KEY``, ``OR_EMBED_BATCH`` (деф 32), ``OR_EMBED_MAX_SIDE``
+    (деф 512 — ресайз перед отправкой, влияет на токены/цену), ``OR_EMBED_TIMEOUT``,
+    ``OR_EMBED_RETRIES``.
+    """
+
+    kind = "openrouter"
+
+    def __init__(self):
+        import requests
+        self.requests = requests
+        self.model_name = MODEL
+        self.api_key = os.environ.get("OPENROUTER_API_KEY", "")
+        self.url = os.environ.get("SEARCH_API_URL") or "https://openrouter.ai/api/v1/embeddings"
+        self.batch = int(os.environ.get("OR_EMBED_BATCH", "32"))
+        self.max_side = int(os.environ.get("OR_EMBED_MAX_SIDE", "512"))
+        self.timeout = int(os.environ.get("OR_EMBED_TIMEOUT", "180"))
+        self.retries = int(os.environ.get("OR_EMBED_RETRIES", "3"))
+        if not self.api_key:
+            print('[encoder] ВНИМАНИЕ: OPENROUTER_API_KEY не задан — embeddings не сработают')
+        print(f"[encoder] openrouter {MODEL} (dim ~1024, batch={self.batch}, max_side={self.max_side})", flush=True)
+
+    def _data_url(self, x) -> str:
+        im = _to_pil(x)
+        if self.max_side:
+            im = im.copy()
+            im.thumbnail((self.max_side, self.max_side))
+        b = io.BytesIO()
+        im.save(b, "JPEG", quality=88)
+        return "data:image/jpeg;base64," + base64.b64encode(b.getvalue()).decode()
+
+    def _post(self, chunk):
+        body = {"model": MODEL,
+                "input": [{"content": [{"type": "image_url",
+                                        "image_url": {"url": self._data_url(x)}}]}
+                          for x in chunk]}
+        headers = {"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"}
+        last = None
+        for attempt in range(1, self.retries + 1):
+            r = self.requests.post(self.url, headers=headers, json=body, timeout=self.timeout)
+            if r.status_code in (429, 500, 502, 503, 529):
+                last = RuntimeError(f"HTTP {r.status_code}: {r.text[:200]}")
+                continue
+            r.raise_for_status()
+            data = r.json()
+            if data.get("error"):
+                raise RuntimeError(f"openrouter embeddings error: {str(data['error'])[:200]}")
+            return [d["embedding"] for d in data["data"]]
+        raise last or RuntimeError("openrouter embeddings failed")
+
+    def embed(self, images, batch_size: int = None) -> np.ndarray:
+        if not isinstance(images, (list, tuple)):
+            images = [images]
+        bs = int(batch_size or self.batch)
+        out = []
+        for i in range(0, len(images), bs):
+            out.extend(self._post(images[i:i + bs]))
+        return _l2(np.asarray(out, dtype=np.float32))
+
+
 _ENC = None
 def get_encoder():
     global _ENC
     if _ENC is None:
         if BACKEND == "remote":
             _ENC = RemoteEncoder()
+        elif KIND == "openrouter":
+            _ENC = OpenRouterEncoder()
         elif KIND == "dinov2":
             _ENC = DinoV2Encoder()
         else:

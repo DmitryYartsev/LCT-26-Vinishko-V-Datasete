@@ -18,6 +18,7 @@ scraped_raw
 
 ML evaluation/querysets/
 ML evaluation/reports/
+ML service/fusion_weights.json
 
 ML train/dummy_data/
 ML train/artifacts/
@@ -38,4 +39,17 @@ web/.output/
 .DS_Store
 .env
 eval/.DS_Store
-ML train/
+# ML train/ — источники metric learning коммитим (см. ветку ml-train), игнорируем артефакты
+# ML train/
+ML train/metric_learning/dummy_data/
+ML train/metric_learning/artifacts/
+Plans/
+data/
+data.zip
+reports/
+
+# архивы для выгрузки в облако (deploy/fetch_data.sh качает их на сервере)
+deploy/archives/
+
+# --- документация: README коммитим (вернули), ARCHITECTURE.md пока не трогаем ---
+ARCHITECTURE.md

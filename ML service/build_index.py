@@ -43,6 +43,8 @@ def warmup(force: bool = False):
     # каталог
     cards = pd.read_csv(CATALOG_CSV, dtype=str, keep_default_na=False).to_dict("records")
     db.upsert_wines(conn, cards)
+    if force:                        # только при явной пересборке: слаги, убранные из каталога
+        db.prune_wines(conn, [c["slug"] for c in cards])
     need_a = force or not db.has_vectors(conn, model)
     need_b = USE_LABEL_BRANCH and (force or not db.has_vectors(conn, label_model))
     if not need_a and not need_b:

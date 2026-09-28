@@ -71,23 +71,85 @@ paths.py  pyproject.toml  README.md  .gitignore
 
 ---
 
-## Быстрый старт (Docker)
+## Поднять сервис (Docker Compose)
 
-Весь сервис (`db` + `ml` + `web`) поднимается одной командой. Нужен готовый `filtered/`
-(шаг 1 ниже) — из него warm-up строит индекс в pgvector на первом старте `ml`.
+Нужны Docker + Compose v2 и ~4 ГБ свободного места (образы + модель SigLIP2 1.4 ГБ).
+
+### 1. Код
 
 ```bash
-docker compose up --build
-# web (UI):   http://localhost:3000
-# ml (API):   http://localhost:8080/health
-# оценщик:    POST http://localhost:8080/v1/eval/predict  (multipart image -> {"slug": ...})
+git clone git@github.com:DmitryYartsev/LCT-26-Vinishko-V-Datasete.git
+cd LCT-26-Vinishko-V-Datasete
 ```
 
-Свап модели без правки кода — через env (см. таблицу ниже), например лёгкая/удалённая на время разработки:
+### 2. Данные и веса (в git не едут)
+
+**Вариант А — данные уже есть на машине** (старый клон/бэкап с папками `data/`, `filtered/`,
+`models/`): скопируйте их рядом с новым клоном.
+
+```bash
+cp -a /путь/к/старому/клону/data     .
+cp -a /путь/к/старому/клону/filtered .
+cp -a /путь/к/старому/клону/models   .
+```
+
+**Вариант Б — чистая машина**: скачивание из Google Drive + HuggingFace одной командой
+(состав архивов и параметры — в [`deploy/README.md`](deploy/README.md)):
+
+```bash
+bash deploy/fetch_data.sh              # data + filtered + models + дамп pgvector + SigLIP2
+python3 deploy/fetch_data.py --check   # опционально: проверить ссылки/размеры, ничего не качая
+```
+
+Если python3 на хосте нет — то же самое в контейнере (образ `python:3.11-slim`, профиль `fetch`):
+
+```bash
+docker compose --profile fetch run --rm fetch              # скачать всё
+docker compose --profile fetch run --rm fetch --check       # только проверка
+```
+
+### 3. Ключ OCR-реранка
+
+```bash
+printf 'OPENROUTER_API_KEY=sk-or-...\n' > .env    # без него сервис работает только retrieval'ом
+```
+
+### 4. Запуск
+
+```bash
+docker compose up --build -d
+docker compose ps
+curl -s localhost:8080/health     # {"status":"ok", ...}
+```
+
+Что происходит: `db` поднимает Postgres+pgvector → `db-init` восстанавливает дамп БД (векторы
+индекса; если дампа нет — `ml` посчитает эмбеддинги сам, ~40 мин) → `ml` грузит SigLIP2 и
+отвечает → `web` поднимает UI.
+
+| Адрес | Что |
+|---|---|
+| http://localhost:3000 | UI (Nuxt) |
+| http://localhost:8080 | мини-UI + `/health` |
+| `POST http://localhost:8080/v1/eval/predict` | скрипт-оценщик: multipart `image` → `{"slug": ...}` |
+
+### Полезные команды
+
+```bash
+docker compose logs -f ml        # логи сервиса (preflight/warm-up/старт)
+docker compose restart ml        # после правки .env или переменных окружения
+docker compose down              # остановить (БД остаётся в томе pgdata)
+docker compose down -v           # остановить и снести том (индекс соберётся заново)
+```
+
+Свап модели без правки кода — через env (см. таблицу ниже), например лёгкая/удалённая:
 ```bash
 SEARCH_MODEL=google/vit-base-patch16-224 SEARCH_BACKEND=remote SEARCH_API_URL=https://... \
   docker compose up --build ml
 ```
+
+Порты по умолчанию 3000 (web), 8080 (ml), 5432 (db). Если 5432 занят локальным Postgres —
+удалите проброс `db.ports` в `docker-compose.yml`: внутри сети контейнеры видят друг друга по
+имени `db`. Полный гайд по развёртыванию на сервере и разбор ошибок — [`deploy/README.md`](deploy/README.md).
 
 ## Запуск шагов (локально, без Docker)
 
@@ -168,9 +230,14 @@ bash participant_test.sh --images-dir ./queries --manifest ./queries.tsv \
 - [x] `encoder.py`: SigLIP 2 → эмбеддинги, индекс каталога (`build_index.py` → `index/catalog.npz`)
 - [x] FastAPI-сервис (`app.py`) + мини-UI: `/v1/eval/predict` + `/v1/search` + `/` — прогон grader'а end-to-end OK (~340 мс/фото CPU)
 - [x] Кроп бутылки (`crop.py`, COCO-YOLO) с env-выключателем — изолирует бутылку от фона/соседей
+- [x] **OCR-реранк near-dups**: VLM (`gpt-4o-mini`) читает ВЫПРЯМЛЕННЫЙ кроп этикетки →
+  самописный мэтч по CSV (год/цвет/тип как дискриминаторы) → гейт по разрыву CSV top1↔top2
+- [x] **P0: recall-харнесс + union-пул + fusion-ранкер** (`ML evaluation/`, `ML service/text_retrieval.py`,
+  `rerank_fusion.py`): recall@K показал потолок image-ретривера (~88%); полнокаталожный
+  текстовый путь поднимает потолок пула до ~94%; калиброванный fusion (`fusion.enabled`)
+- [ ] **P0-4: извлечение полей** (сильнее VLM/hi-res кроп: год/цвет) → дорога к 90%+
 - [ ] **Валидация (ML evaluation)** (синтетика + студийные held-out + out-of-catalog негативы) → F1 top-1/top-5 ← следующее
 - [ ] so400m + разрешение 384/512 на GPU (различение near-dups)
-- [ ] OCR-реранк near-dups (читать название/год с этикетки)
 - [ ] Калибровка порога «нет в каталоге / аналоги»
 - [ ] Чистка скрейпа (dHash-дедуп + верификация по эталону) → мульти-вектор галерея
 - [ ] Мобильная карточка (Nuxt) + фича после поиска, Docker Compose
@@ -186,10 +253,11 @@ bash participant_test.sh --images-dir ./queries --manifest ./queries.tsv \
   относительные сравнения — надёжны.
 - **Модель по умолчанию** (CPU-сессия): `google/siglip2-base-patch16-256`.
   На GPU 16 ГБ — `google/siglip2-so400m-patch16-384` (лучше на near-duplicates).
-- **Кроп vs near-dups (важно):** кроп изолирует бутылку и поднимает абсолютные score, но у
-  «серийных» вин (напр. классическая линейка Массандры) этикетки почти идентичны — отличается
-  лишь мелкий текст названия, который `base-256` не читает. Т.е. узкое место near-dups —
-  **разрешение/текст**, а не фон. Рычаги: so400m + 384/512, OCR-реранк. Чистый эффект кропа
-  на F1 меряется в «ML evaluation» (по 3 публичным фото судить нельзя).
+- **Near-dups (важно):** у «серийных» вин (напр. линейка Массандры) этикетки почти
+  идентичны — отличается мелкий текст названия/года/цвета/типа, который `base-256` не читает.
+  Поэтому узкое место near-dups — **текст**, а не фон; рычаг — OCR-реранк (`ML service/ocr_rerank.py`):
+  VLM читает выпрямленный кроп этикетки, а решение принимается по разрыву CSV top1↔top2
+  (год/цвет/тип весят высоко), retrieval остаётся fallback'ом. Второй рычаг — so400m + 384/512.
+  Чистый эффект меряется в «ML evaluation».
 - Bing/DuckDuckGo для скрейпа не годятся (отдают decoy-мусор на кириллицу) — только Yandex.
 ```

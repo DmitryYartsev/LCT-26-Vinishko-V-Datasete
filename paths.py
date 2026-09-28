@@ -21,6 +21,14 @@ SCRAPED = ROOT / "solution/images/scraped_raw"        # веб-скрейп (в 
 FILTERED = ROOT / "filtered"                          # <slug>/NN.webp — все фото по вину
 CATALOG_CSV = FILTERED / "catalog.csv"                # инфа про slug (карточки + список фото)
 
+# --- данные для оценки/эталонов (внутри репо) ---
+DATA = ROOT / "data"
+EVAL_CSV = DATA / "eval.csv"                          # image,true_slug (233 фото)
+EVAL_IMAGES = DATA / "eval"                           # папка с фото для EVAL_CSV
+REFERENCE_CSV = DATA / "found_in_catalog_corrected.csv"  # каталог (2108 slug)
+START_PHOTOS = DATA / "start_photos"                  # эталонные фото по slug
+DATA_REPORTS = DATA / "reports"                       # отчёты прогонов пайплайна
+
 # --- индекс для сервиса (gitignore) ---
 INDEX_DIR = ROOT / "ML service" / "index"
 
@@ -36,6 +44,8 @@ TRAIN_DUMMY = TRAIN_DIR / "dummy_data"                # синтетика дл�
 # --- прочее ---
 SERVICE_DIR = ROOT / "ML service"
 EVAL_DIR = ROOT / "eval"                              # скрипт-оценщик + публичные query
+EVAL_REPORTS = ROOT / "ML evaluation" / "reports"     # отчёты харнесса оценки (gitignore)
+FUSION_WEIGHTS = SERVICE_DIR / "fusion_weights.json"  # веса калиброванного fusion-ранкера (gitignore)
 
 
 def index_file(crop: bool) -> Path:
