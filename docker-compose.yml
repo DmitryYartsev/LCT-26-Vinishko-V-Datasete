@@ -91,13 +91,35 @@ services:
     ports:
       - "8080:8080"
 
+  sommelier:
+    build:
+      context: "./sommelier service"
+    environment:
+      DATABASE_URL: postgresql://vino:vino@db:5432/vino
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      LLM_MODEL: ${LLM_MODEL:-google/gemini-2.5-flash}
+      STT_MODEL: ${STT_MODEL:-google/gemini-2.5-flash}
+    volumes:
+      - "./paths.py:/app/paths.py:ro"
+      - "./sommelier service:/app/sommelier service"
+      - "./filtered/catalog.csv:/app/filtered/catalog.csv:ro"
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8090:8090"
+
   web:
     build:
       context: "./web"
     environment:
-      ML_URL: http://ml:8080
+      NUXT_ML_URL: http://ml:8080
+      NUXT_SOMMELIER_URL: http://sommelier:8090
+      # 1 — показывать в UI время поиска, сходство и score/margin (для демо)
+      NUXT_PUBLIC_DEBUG_INFO: ${DEBUG_INFO:-0}
     depends_on:
       - ml
+      - sommelier
     ports:
       - "3000:3000"
 

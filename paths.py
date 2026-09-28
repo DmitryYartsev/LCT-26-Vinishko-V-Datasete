@@ -43,9 +43,14 @@ TRAIN_DUMMY = TRAIN_DIR / "dummy_data"                # синтетика дл�
 
 # --- прочее ---
 SERVICE_DIR = ROOT / "ML service"
+SOMMELIER_DIR = ROOT / "sommelier service"
 EVAL_DIR = ROOT / "eval"                              # скрипт-оценщик + публичные query
 EVAL_REPORTS = ROOT / "ML evaluation" / "reports"     # отчёты харнесса оценки (gitignore)
 FUSION_WEIGHTS = SERVICE_DIR / "fusion_weights.json"  # веса калиброванного fusion-ранкера (gitignore)
+
+# --- атрибуты вин с vino-svoe.ru (блюда/крепость/подача; вход сомелье, в git) ---
+WINES_PARSED = SOMMELIER_DIR / "wines_parsed.jsonl"   # карточки сайта (по site-slug)
+WINES_SLUG_MAP = SOMMELIER_DIR / "slug_map.csv"       # slug каталога -> site_slug (+ метод/score матча)
 
 
 def index_file(crop: bool) -> Path:

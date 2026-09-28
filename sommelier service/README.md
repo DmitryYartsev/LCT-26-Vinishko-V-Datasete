@@ -1,0 +1,66 @@
+# sommelier service — цифровой сомелье
+
+Пользователь заранее рассказывает (текстом или голосом), к какому блюду/поводу нужно вино и что он
+любит. LLM ведёт диалог и обновляет **профиль предпочтений**; сервис подбирает вина из каталога, а при
+сканировании этикетки показывает, насколько найденное вино подходит под профиль.
+
+**Stateless:** переписка и профиль живут на фронте (localStorage) и приходят в каждом запросе.
+На сервере — только логи (JSON-строки в stdout, опционально `LOG_FILE`). Аудио не хранится и не
+логируется — только расшифровка.
+
+## Эндпоинты (порт 8090)
+
+| Метод | Что | Вход → выход |
+|---|---|---|
+| `POST /v1/chat` | ход диалога (LLM) | `{messages, profile}` → `{reply, profile, picks, suggestions}` |
+| `POST /v1/recommend` | подборка без LLM | `{profile, k, exclude}` → `{profile, picks}` |
+| `POST /v1/match` | соответствие одного вина профилю | `{slug, profile}` → `{wine, score, reasons, checks, verdict, verdict_text}` |
+| `POST /v1/match_many` | то же пакетно (сканы за сессию, «похожие») | `{slugs, profile}` → `{items}` |
+| `POST /v1/analogs` | аналоги из других виноделен | `{slug, k}` → `{picks}` |
+| `POST /v1/stt` | голос → текст | multipart `audio` (webm/mp4/ogg/wav) → `{text}` |
+| `GET /v1/wine/{slug}`, `/v1/vocab`, `/health` | карточка / словари / статус | |
+
+`score` — 0..100 или `null`, если профиль пуст или не пересекается с данными вина.
+
+## Как устроено
+
+- `seed.py` — warm-up: `wines_parsed.jsonl` (карточки vino-svoe.ru: блюда, крепость, подача,
+  сладость) + `filtered/catalog.csv` → таблица `wine_profiles` (тот же Postgres, что у `ml`).
+  Маппинг slug каталога → slug сайта — `slug_map.csv` (оба файла лежат в этой папке, в git), берётся
+  только надёжный (точный slug или `match_score >= 0.7`). Итог: 1968 вин каталога (1911 с атрибутами сайта) + 131 вино
+  только с сайта (идут в рекомендации, `in_catalog=false`).
+- `prefs.py` — схема профиля, словари (цвет / сладость / 12 групп блюд) и **детерминированный скоринг**:
+  взвешенная доля выполненных критериев, заданных пользователем, штраф ×0.3 за «не хочу».
+  LLM в скоринге не участвует → `/v1/match` быстрый и воспроизводимый. Кроме score отдаёт построчные
+  `checks` (параметр → значение вина → ✓/—) и вердикт `ok | part | bad` с текстом: народный рейтинг в score
+  не входит, но ниже `RATING_MIN` превращает «подходит» в «по вкусу да, но рейтинг низкий».
+- `/v1/analogs` — профиль строится из самого вина (цвет, сладость, игристость, сорта, блюда), вина той же
+  винодельни исключаются; при равном score ближе те, у кого совпадает набор сортов, регион и блюда.
+- `store.py` — Postgres; вкусовые заметки (`notes`: «вишня», «минеральность») ищутся полнотекстом
+  по описаниям (`to_tsvector('russian', …)`).
+- `llm.py` — OpenRouter `chat/completions`: диалог → строгий JSON `{reply, profile, suggestions}` (suggestions — готовые короткие ответы-чипы); STT — тот же
+  эндпоинт с `input_audio` (ffmpeg перекодирует запись браузера в wav 16 кГц).
+
+## Запуск
+
+```bash
+cp .env.example .env        # в корне репо; вписать OPENROUTER_API_KEY
+docker compose up --build sommelier
+curl localhost:8090/health
+```
+
+Локально без Docker (нужны Postgres и ffmpeg):
+```bash
+cd "sommelier service"
+DATABASE_URL=postgresql://vino:vino@localhost:5432/vino OPENROUTER_API_KEY=... \
+  uv run uvicorn app:app --port 8090
+uv run python seed.py --force     # перезалить wine_profiles после обновления парсинга
+```
+
+| ENV | По умолч. | Смысл |
+|---|---|---|
+| `OPENROUTER_API_KEY` | — | ключ OpenRouter (без него `/v1/chat` и `/v1/stt` отдают 502, остальное работает) |
+| `LLM_MODEL` / `STT_MODEL` | `google/gemini-2.5-flash` | модели OpenRouter (STT-модель должна принимать аудио) |
+| `RATING_MIN` | `4.0` | народный рейтинг ниже — «хорошее ли вино само по себе» не выполнено |
+| `HISTORY_TURNS` | `12` | сколько последних реплик уходит в LLM (остальное уже «сжато» в профиль) |
+| `LOG_FILE` | — | дублировать JSON-логи в файл |

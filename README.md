@@ -7,6 +7,11 @@
 Формат для скрипта-оценщика: `POST /v1/eval/predict`, multipart-поле `image` → `{"slug":"..."}`.
 Есть мини-UI: `GET /` (загрузка фото → карточка + top-5), открывается на `http://127.0.0.1:8080/`.
 
+**Доп. фича — цифровой сомелье** (`sommelier service/`): пользователь заранее рассказывает текстом или
+голосом, к чему/для какого повода берёт вино; LLM собирает профиль предпочтений, сервис подбирает вина,
+а на каждой отсканированной этикетке показывает «под ваш запрос: N%» с причинами. Сервис stateless —
+переписка живёт на фронте.
+
 ---
 
 ## Данные (что уже разобрано)
@@ -56,6 +61,8 @@ eda and image filtering/    # EDA + фильтрация мусора (офла�
 ML service/                 # инференс-сервис + построение индекса           [README]
   app.py encoder.py crop.py search.py build_index.py  static/index.html  index/*.npz
 ML evaluation/              # валидация качества (recall@1/@5, ...)          [README]
+sommelier service/          # цифровой сомелье: LLM-диалог, STT, подбор/скоринг [README]
+web/                        # Nuxt: mobile-first UI (сканер + сомелье), Nitro-прокси к ml/sommelier
   build_queryset.py evaluate.py  querysets/ reports/
 filtered/                   # выход process_images: фото по slug + catalog.csv  (gitignore)
 raw_images/                 # распакованная медиатека Strapi (вход process_images) (gitignore)
@@ -73,13 +80,20 @@ paths.py  pyproject.toml  README.md  .gitignore
 
 ## Поднять сервис (Docker Compose)
 
-На чистой машине всё, кроме ключа OCR, поднимается двумя командами:
+Четыре сервиса (`db` + `ml` + `sommelier` + `web`) поднимаются одной командой: данные каталога,
+веса и дамп индекса скачиваются автоматически (сервис `fetch`), остаётся только положить ключ
+OpenRouter. Атрибуты вин для сомелье лежат в git (`sommelier service/wines_parsed.jsonl` +
+`slug_map.csv`).
 
 ```bash
-git clone -b ml-dev2 git@github.com:DmitryYartsev/LCT-26-Vinishko-V-Datasete.git
+git clone -b ml-web git@github.com:DmitryYartsev/LCT-26-Vinishko-V-Datasete.git
 cd LCT-26-Vinishko-V-Datasete
 cp /путь/к/секрету/.env .        # только ключ: OPENROUTER_API_KEY=sk-or-...
 docker compose up --build
+# web (UI):   http://localhost:3000
+# ml (API):   http://localhost:8080/health
+# sommelier:  http://localhost:8090/health
+# оценщик:    POST http://localhost:8080/v1/eval/predict  (multipart image -> {"slug": ...})
 ```
 
 Первый запуск сам скачивает то, чего нет в git (сервис `fetch`): каталог `data/`, фото
@@ -205,6 +219,7 @@ bash participant_test.sh --images-dir ./queries --manifest ./queries.tsv \
 | `THRESH_SCORE` / `THRESH_MARGIN` | `0.75` / `0.015` | пороги флага `in_catalog` (черновые, калибровать) |
 | `EVAL_ABSTAIN` | `0` | `1` — отдавать `null` при низкой уверенности в eval-эндпоинте |
 | `HF_HUB_OFFLINE` | — | `1` — не ходить в HuggingFace (модель из кэша) |
+| `OPENROUTER_API_KEY` | — | ключ для сомелье (LLM + STT); `LLM_MODEL`/`STT_MODEL` — см. `sommelier service/README.md` |
 
 > `SIGLIP_MODEL` ещё читается как алиас `SEARCH_MODEL` (обратная совместимость).
 
@@ -228,7 +243,8 @@ bash participant_test.sh --images-dir ./queries --manifest ./queries.tsv \
 - [ ] so400m + разрешение 384/512 на GPU (различение near-dups)
 - [ ] Калибровка порога «нет в каталоге / аналоги»
 - [ ] Чистка скрейпа (dHash-дедуп + верификация по эталону) → мульти-вектор галерея
-- [ ] Мобильная карточка (Nuxt) + фича после поиска, Docker Compose
+- [x] Мобильная карточка (Nuxt), Docker Compose
+- [x] Цифровой сомелье: диалог (LLM, OpenRouter) + голос (STT) → профиль → подборка + «под ваш запрос N%» на скане
 
 ---
 
