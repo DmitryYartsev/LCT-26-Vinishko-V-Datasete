@@ -102,10 +102,14 @@ services:
     volumes:
       - "./paths.py:/app/paths.py:ro"
       - "./sommelier service:/app/sommelier service"
-      - "./filtered/catalog.csv:/app/filtered/catalog.csv:ro"
+      # папку монтируем целиком (а не файл catalog.csv): иначе на чистой машине docker
+      # создаёт на месте отсутствующего файла каталог и fetch не может туда распаковать архив
+      - "./filtered:/app/filtered:ro"
     depends_on:
       db:
         condition: service_healthy
+      fetch:
+        condition: service_completed_successfully
     ports:
       - "8090:8090"
 
