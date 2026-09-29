@@ -18,6 +18,7 @@ from __future__ import annotations
 import argparse
 import shutil
 import sys
+import time
 import urllib.error
 import urllib.request
 import zipfile
@@ -89,8 +90,10 @@ def human(n) -> str:
     return f'{n:.1f} ГБ'
 
 
-def _open(url: str, timeout: int = 60):
-    req = urllib.request.Request(url, headers={'User-Agent': UA})
+def _open(url: str, timeout: int = 60, headers: dict | None = None):
+    hdrs = {'User-Agent': UA}
+    hdrs.update(headers or {})
+    req = urllib.request.Request(url, headers=hdrs)
     return urllib.request.urlopen(req, timeout=timeout)
 
 
@@ -109,46 +112,109 @@ def _confirm_token(html: str) -> str:
 
 
 def _stream_to(resp, out_path: Path, what: str) -> int:
+    """Дописывает ответ в ``out_path`` (пишем в ``*.part``, потом атомарно заменяем).
+
+    ``resp`` может быть ответом на Range-запрос (206) — тогда файл дописывается, а не
+    переписывается; это позволяет докачивать большие файлы (модель SigLIP2 1.4 ГБ)
+    после обрыва сети.
+    """
+    append = getattr(resp, 'status', 200) == 206 and out_path.suffix == '.part' and out_path.exists()
     total = int(resp.headers.get('Content-Length') or 0)
-    done, last = 0, 0
+    base = out_path.stat().st_size if append else 0
+    done, last = base, base
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = out_path.with_suffix(out_path.suffix + '.part')
-    with open(tmp, 'wb') as f:
+    with open(out_path, 'ab' if append else 'wb') as f:
         while True:
             chunk = resp.read(1 << 20)
             if not chunk:
                 break
             f.write(chunk)
             done += len(chunk)
-            if done - last >= (20 << 20) or (total and done == total):
+            if done - last >= (50 << 20) or (total and done - base == total):
                 last = done
-                pct = f' ({done * 100 // total}%)' if total else ''
-                log(f'    {what}: {human(done)} / {human(total) if total else "—"}{pct}')
-    tmp.replace(out_path)
+                pct = f' ({done * 100 // (base + total)}%)' if total else ''
+                log(f'    {what}: {human(done)} / {human(base + total) if total else "—"}{pct}')
     return done
 
 
-def drive_download(file_id: str, out_path: Path) -> int:
-    """Качает файл с Google Drive по id, обходя страницу подтверждения для больших файлов."""
+def download_file(url: str, out_path: Path, expect: int = 0, tries: int = 5, what: str = '') -> int:
+    """Скачивает файл с докачкой и ретраями. Возвращает размер.
+
+    Сеть до HuggingFace/Google Drive бывает нестабильной: большой файл (1.4 ГБ) обрывается
+    на середине. Держим ``*.part`` и на следующей попытке запрашиваем ``Range: bytes=N-``,
+    поэтому каждая повторная попытка продолжает загрузку, а не начинает её заново.
+    """
+    tmp = out_path.with_suffix(out_path.suffix + '.part')
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    name = what or out_path.name
+    last_err = None
+    for attempt in range(1, tries + 1):
+        if tmp.exists() and expect and tmp.stat().st_size == expect:
+            break
+        already = tmp.stat().st_size if tmp.exists() else 0
+        headers = {'User-Agent': UA}
+        if already:
+            headers['Range'] = f'bytes={already}-'
+        try:
+            req = urllib.request.Request(url, headers=headers)
+            with urllib.request.urlopen(req, timeout=120) as resp:
+                if already and getattr(resp, 'status', 200) != 206:
+                    already = 0                     # сервер не умеет Range — качаем заново
+                    tmp.unlink(missing_ok=True)
+                    tmp = out_path.with_suffix(out_path.suffix + '.part')
+                got = _stream_to(resp, tmp, name)
+            if expect and got != expect:
+                raise RuntimeError(f'скачано {human(got)} вместо {human(expect)}')
+            tmp.replace(out_path)
+            return got
+        except (urllib.error.URLError, TimeoutError, ConnectionError, OSError, RuntimeError) as e:
+            last_err = e
+            done = tmp.stat().st_size if tmp.exists() else 0
+            log(f'    {name}: попытка {attempt}/{tries} не удалась ({e}); скачано {human(done)} — '
+                f'продолжаю с этого места')
+            time.sleep(min(10, 2 * attempt))
+    raise RuntimeError(f'{name}: не скачалось за {tries} попыток ({last_err})')
+
+
+def drive_download(file_id: str, out_path: Path, expect: int = 0, tries: int = 5) -> int:
+    """Качает файл с Google Drive по id: подтверждение для больших файлов + докачка и ретраи."""
     base = 'https://drive.usercontent.google.com/download'
-    url = f'{base}?id={file_id}&export=download'
-    with _open(url) as resp:
-        ctype = (resp.headers.get('Content-Type') or '').lower()
-        if 'text/html' not in ctype:
-            return _stream_to(resp, out_path, out_path.name)
-        html = resp.read().decode('utf-8', 'replace')
-    if 'request access' in html.lower() or 'Запросить доступ' in html:
-        raise RuntimeError('файл закрыт: включите доступ «всем, у кого есть ссылка» '
-                           '(Anyone with the link)')
-    token = _confirm_token(html)
-    url2 = f'{base}?id={file_id}&export=download&confirm=t'
-    if token:
-        url2 += f'&uuid={token}'
-    with _open(url2) as resp:
-        ctype = (resp.headers.get('Content-Type') or '').lower()
-        if 'text/html' in ctype:
-            raise RuntimeError('Google Drive вернул страницу вместо файла (проверьте доступ и id)')
-        return _stream_to(resp, out_path, out_path.name)
+    tmp = out_path.with_suffix(out_path.suffix + '.part')
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    last_err = None
+    for attempt in range(1, tries + 1):
+        already = tmp.stat().st_size if tmp.exists() else 0
+        headers = {'Range': f'bytes={already}-'} if already else None
+        try:
+            with _open(f'{base}?id={file_id}&export=download') as resp:
+                ctype = (resp.headers.get('Content-Type') or '').lower()
+                if 'text/html' in ctype:
+                    html = resp.read().decode('utf-8', 'replace')
+                    if 'request access' in html.lower() or 'Запросить доступ' in html:
+                        raise RuntimeError('файл закрыт: включите доступ «всем, у кого есть ссылка» '
+                                           '(Anyone with the link)')
+                    token = _confirm_token(html)
+                    url2 = f'{base}?id={file_id}&export=download&confirm=t'
+                    if token:
+                        url2 += f'&uuid={token}'
+                    with _open(url2, timeout=120, headers=headers) as r2:
+                        if 'text/html' in (r2.headers.get('Content-Type') or '').lower():
+                            raise RuntimeError('Google Drive вернул страницу вместо файла '
+                                               '(проверьте доступ и id)')
+                        got = _stream_to(r2, tmp, out_path.name)
+                else:
+                    got = _stream_to(resp, tmp, out_path.name)
+            if expect and got != expect:
+                raise RuntimeError(f'скачано {human(got)} вместо {human(expect)}')
+            tmp.replace(out_path)
+            return got
+        except (urllib.error.URLError, TimeoutError, ConnectionError, OSError, RuntimeError) as e:
+            last_err = e
+            done = tmp.stat().st_size if tmp.exists() else 0
+            log(f'    {out_path.name}: попытка {attempt}/{tries} не удалась ({e}); '
+                f'скачано {human(done)} — продолжаю с этого места')
+            time.sleep(min(10, 2 * attempt))
+    raise RuntimeError(f'{out_path.name}: не скачалось за {tries} попыток ({last_err})')
 
 
 def download_archive(arc: dict, dest_zips: Path, force: bool) -> Path:
@@ -157,7 +223,7 @@ def download_archive(arc: dict, dest_zips: Path, force: bool) -> Path:
     if zip_path.is_file() and not force and zip_path.stat().st_size == arc['expect']:
         log(f'    архив уже скачан: {zip_path.name} ({human(zip_path.stat().st_size)})')
         return zip_path
-    size = drive_download(arc['gid'], zip_path)
+    size = drive_download(arc['gid'], zip_path, expect=arc['expect'])
     log(f'    скачано {zip_path.name}: {human(size)}')
     if arc['expect'] and size != arc['expect']:
         log(f'    ВНИМАНИЕ: ожидалось {human(arc["expect"])} — архив могли перезалить '
@@ -208,12 +274,12 @@ def fetch_encoder(dest: Path) -> None:
         if target.is_file() and target.stat().st_size == size:
             log(f'    {name}: уже есть ({human(size)})')
             continue
-        log(f'    {name}: качаю ({human(size)})')
-        with _open(_encoder_url(name), timeout=120) as resp:
-            got = _stream_to(resp, target, name)
+        part = target.with_suffix(target.suffix + '.part')
+        resume = f' (докачиваю с {human(part.stat().st_size)})' if part.exists() else ''
+        log(f'    {name}: качаю ({human(size)}){resume}')
+        got = download_file(_encoder_url(name), target, expect=size, what=name)
         if got != size:
-            raise RuntimeError(f'{name}: скачано {human(got)} вместо {human(size)} — '
-                              f'повторите запуск (файл .part не используется)')
+            raise RuntimeError(f'{name}: скачано {human(got)} вместо {human(size)}')
     log('    энкодер готов')
 
 

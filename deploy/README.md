@@ -103,6 +103,28 @@ docker compose run --rm fetch --check      # проверить ссылки/р�
 | `Google Drive вернул страницу вместо файла` | ссылка/`id` устарели — проверьте `ARCHIVES` в `fetch_data.py` |
 | `это не zip-архив` | файл скачался не полностью: `--force` |
 | `[Errno 21] Is a directory: '.../filtered/catalog.csv'` | docker создал пустой каталог на месте файла (bind-mount файла до скачивания). `fetch` чинит это сам (удаляет каталог и распаковывает архив); если запускали только `sommelier` — удалите каталог вручную (`rmdir filtered/catalog.csv`) и поднимите стек снова |
+| `fetch exited with code 137`, «Gracefully stopping…», `No such container: …` | контейнер `fetch` кого-то **убили снаружи**: почти всегда это вторая копия репозитория на той же машине — у неё то же имя compose-проекта (оно берётся из имени папки), поэтому её `docker compose down/up` управляет вашими контейнерами. См. «Две копии на одной машине» ниже |
+
+## Две копии репозитория на одной машине
+
+Имя compose-проекта по умолчанию = имя папки (у обеих копий — `LCT-26-Vinishko-V-Datasete`),
+поэтому копии начинают управлять контейнерами друг друга: одна делает `docker compose down` —
+другая теряет свой `fetch` на середине загрузки (в логе — `exited with code 137`).
+
+Разведите копии разными именами проектов — положите в `.env` рядом с ключом:
+
+```
+OPENROUTER_API_KEY=sk-or-...
+COMPOSE_PROJECT_NAME=vino-test2      # у второй копии — своё имя
+```
+
+`docker compose` читает `COMPOSE_PROJECT_NAME` из `.env` автоматически, имена контейнеров и томов
+станут уникальными (`vino-test2-db-1`, `vino-test2_pgdata`, …). Тот же эффект даёт переменная
+окружения: `COMPOSE_PROJECT_NAME=vino-test2 docker compose up -d`.
+
+Загрузка данных прерывается безопасно: архив пишется в `*.part` и подменяется целиком, поэтому
+после повторного `docker compose up -d` (или `docker compose run --rm fetch`) скачивание просто
+продолжается с нуля без порчи файлов.
 | `No space left on device` | нужно ~3 ГБ свободного места (1.4 ГБ модель + архивы + распаковка) |
 | `docker compose up` пишет `dependency failed to start: ... fetch exited (N)` | скачивание упало: `docker compose logs fetch` (нет сети / нет доступа к файлу / мало места) |
 | `[preflight] НЕ ХВАТАЕТ ФАЙЛОВ` | не выполнен `fetch_data.sh` (или упал на середине) |
