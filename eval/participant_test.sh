@@ -2,6 +2,13 @@
 
 # Sends every image from queries.tsv to the participant service and writes only
 # query_id, image_path, image_sha256, predicted_slug and latency_ms to JSONL.
+#
+# ВАЖНО (наш форк для стенда): лимит ожидания ответа — EVAL_MAX_TIME секунд (по
+# умолчанию 300, у организаторов в оригинале было 10). Наш сервис считает OCR
+# (внешний VLM) по каждому фото: 10 секунд не хватало, и харнесс записывал
+# predicted_slug: null — это выглядит как ошибка распознавания, хотя ответ просто
+# не успевал прийти. Учтите: в checksums.sha256 лежит сумма ОРИГИНАЛЬНОГО скрипта,
+# и в прогоне организаторов действует их собственный лимит.
 
 set -uo pipefail
 
@@ -9,13 +16,15 @@ images_dir=""
 manifest=""
 endpoint="http://127.0.0.1:8080/v1/eval/predict"
 output="predictions.jsonl"
+max_time="${EVAL_MAX_TIME:-300}"     # сек на фото; 300 = с запасом на OCR-тракт
 
 usage() {
   printf '%s\n' \
     "Usage: $0 --images-dir DIR --manifest FILE [--endpoint URL] [--output FILE]" \
     "" \
     "Manifest header: query_id<TAB>image_path" \
-    "Accepted responses: {\"slug\":\"...\"} or [{\"slug\":\"...\"}]"
+    "Accepted responses: {\"slug\":\"...\"} or [{\"slug\":\"...\"}]" \
+    "Env: EVAL_MAX_TIME — per-image timeout, seconds (default 300)"
 }
 
 die() {
@@ -133,7 +142,7 @@ while IFS=$'\t' read -r query_id image_relpath extra <&3 || \
     --show-error \
     --request POST \
     --connect-timeout 5 \
-    --max-time 10 \
+    --max-time "$max_time" \
     --output "$response_body" \
     --write-out $'%{http_code}\t%{time_total}' \
     --form "$form_value" \
