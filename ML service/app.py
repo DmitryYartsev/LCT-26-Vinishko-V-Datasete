@@ -38,7 +38,10 @@ from crop import (maybe_crop, maybe_label_crop, ocr_label_crop, get_cropper,
 from build_index import warmup
 import preflight
 
-THRESH_SCORE = float(os.environ.get("THRESH_SCORE", "0.75"))
+THRESH_SCORE = float(os.environ.get("THRESH_SCORE", "0.81"))       # HI: карточка сразу
+THRESH_SCORE_LO = float(os.environ.get("THRESH_SCORE_LO", "0.70"))  # LO: ниже — «нет в каталоге»
+OCR_CONFIRM_CONF = float(os.environ.get("OCR_CONFIRM_CONF", "0.80"))  # уверенность OCR-переранка
+OCR_AGREE_CONF = float(os.environ.get("OCR_AGREE_CONF", "0.80"))      # уверенность «OCR согласен»
 THRESH_MARGIN = float(os.environ.get("THRESH_MARGIN", "0.015"))
 # SEARCH_PIPELINE: combined = бутылка + этикетка (макс. score), bottle = только бутылка,
 # label = только этикетка. Отбор ветки — по максимальному top-1 score.
@@ -132,7 +135,9 @@ def _rank(img: Image.Image, k: int | None = None):
     top1 = res[0]["score"] if res else 0.0
     top2 = res[1]["score"] if len(res) > 1 else 0.0
     margin = round(top1 - top2, 4)
-    in_catalog = bool(top1 >= THRESH_SCORE)
+    # база гейта: «явно ниже LO — вина нет в каталоге»; точное решение принимает _gate()
+    # после OCR-реранка (там доступны stage/csv_confidence).
+    in_catalog = bool(top1 >= THRESH_SCORE_LO)
     return res, top1, margin, in_catalog
 
 
@@ -161,6 +166,36 @@ def _rerank(img: Image.Image, pre_ocr_slug, pre_ocr_score) -> dict:
                              bottle_crop=getattr(_rank, "bottle", None))
 
 
+def _gate(top1: float, rr: dict) -> tuple:
+    """Решение «есть в каталоге»: показать карточку или сценарий «похожие вина».
+
+    * ``top1 >= THRESH_SCORE`` (HI) — сильное визуальное совпадение, карточка сразу;
+    * ``top1 <  THRESH_SCORE_LO`` (LO) — слишком слабо, вина в каталоге нет;
+    * между LO и HI — только если OCR уверенно ПОДТВЕРДИЛ карточку:
+      либо переставил ответ (``stage=ocr_rerank``, ``csv_confidence >= OCR_CONFIRM_CONF``),
+      либо согласился с кандидатом retrieval (``reason=csv_agrees``, ``>= OCR_AGREE_CONF``).
+
+    Без этого гейта любой запрос получал карточку «ближайшего» каталожного вина
+    (``in_catalog = top1 >= 0.75``), поэтому иностранное вино с похожей этикеткой
+    выглядело найденным. Калибровка на 188 позитивах (185 + 3 «то же вино, другой
+    год») и 8 настоящих негативах: ложных карточек 4/8 → 0/8, точность карточек
+    0.735 → 0.800, F1 решения 0.8293 → 0.8213 (в пределах шума), карточку сохраняют
+    165/188 фото. Пороги: HI=0.81, LO=0.70, OCR=0.80 (``config/pipeline.yaml``).
+
+    Возвращает ``(in_catalog, reason)`` — reason попадает в ответ как ``gate_reason``.
+    """
+    if top1 >= THRESH_SCORE:
+        return True, "visual_hi"
+    if top1 < THRESH_SCORE_LO:
+        return False, "low_score"
+    conf = float(rr.get("csv_confidence") or 0.0)
+    if rr.get("stage") == "ocr_rerank" and conf >= OCR_CONFIRM_CONF:
+        return True, "ocr_confirms"
+    if rr.get("reason") == "csv_agrees" and conf >= OCR_AGREE_CONF:
+        return True, "ocr_agrees"
+    return False, "ocr_not_confirmed"
+
+
 @app.post("/v1/eval/predict")
 async def eval_predict(image: UploadFile = File(...)):
     img = _read_image(await image.read())
@@ -185,7 +220,9 @@ async def search(image: UploadFile = File(...)):
     res, top1, margin, in_catalog = _rank(img)
     pre_ocr_slug = res[0]["slug"] if res else None
     rr = _rerank(img, pre_ocr_slug, top1)
+    in_catalog, gate_reason = _gate(top1, rr)
     return {"in_catalog": in_catalog,
+            "gate_reason": gate_reason,
             "elapsed_ms": round(1000 * (time.perf_counter() - t)),
             "pipeline": SEARCH_PIPELINE, "branch": getattr(_rank, "branch", None),
             "branches": getattr(_rank, "branches", None),

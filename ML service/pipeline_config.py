@@ -44,8 +44,14 @@ def apply_retrieval_env(cfg) -> None:
     os.environ['LABEL_CROP_MIN_AREA'] = str(getattr(o, 'label_crop_min_area', 0.02))
     os.environ['LABEL_CROP_MAX_ASPECT'] = str(getattr(o, 'label_crop_max_aspect', 3.0))
     os.environ['THRESH_SCORE'] = str(r.thresh_score)
+    os.environ['THRESH_SCORE_LO'] = str(r.get('thresh_score_lo', 0.70))
     os.environ['THRESH_MARGIN'] = str(r.thresh_margin)
     os.environ['EVAL_ABSTAIN'] = '1' if r.eval_abstain else '0'
+    # Гейт «есть в каталоге»: между LO и HI карточка показывается только если OCR
+    # подтвердил кандидата (калибровка: 188 позитивов / 8 настоящих негативов,
+    # ложных карточек 4/8 -> 0/8; пороги HI=0.81, LO=0.70, OCR=0.80).
+    os.environ['OCR_CONFIRM_CONF'] = str(o.get('confirm_confidence', 0.80))
+    os.environ['OCR_AGREE_CONF'] = str(cfg.csv_match.get('agree_confidence', 0.80))
     os.environ['DATABASE_URL'] = str(r.database_url)
     # политика кропа (аудит Reports/15_Crop_audit.md). Исторические значения по
     # умолчанию: старые конфиги и уже собранный индекс остаются валидными.
