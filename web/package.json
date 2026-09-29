@@ -1,0 +1,13 @@
+{
+  "name": "vino-web",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "nuxi dev --host 0.0.0.0",
+    "build": "nuxi build",
+    "preview": "node .output/server/index.mjs"
+  },
+  "devDependencies": {
+    "nuxt": "^3.13.0"
+  }
+}

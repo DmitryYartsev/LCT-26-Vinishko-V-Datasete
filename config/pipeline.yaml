@@ -1,0 +1,109 @@
+# Конфиг пайплайна распознавания (сервис ml, OmegaConf; допустима интерполяция ${paths.xxx}).
+#   кроп бутылки (YOLO) -> кроп этикетки (YOLO) -> выравнивание -> SigLIP2 + pgvector
+#   -> OCR-rerank (VLM -> поля этикетки -> CsvMatcher) -> гейт «есть в каталоге».
+# Описание параметров — Docs/configuration.md. После правки: docker compose restart ml.
+# Параметры с пометкой [индекс] требуют пересборки: docker compose exec ml python build_index.py --force
+
+paths:
+  # пути внутри контейнера ml (data/ смонтирована в /app/ref)
+  prompt_file: /app/prompts_wine_match.txt
+  reference_csv: /app/ref/found_in_catalog_corrected.csv
+  start_photos: /app/ref/start_photos
+  models_dir: /app/models
+  catalog_ocr_fields: /app/ref/catalog_ocr_fields.csv   # OCR-разметка каталожных фото
+
+# ---------------------------------------------------------------- retrieval
+retrieval:
+  model: ${paths.models_dir}/siglip2-base-patch16-256   # [индекс] энкодер; он же ключ векторов в pgvector
+  encoder: auto                  # [индекс] auto | siglip | dinov2
+  backend: local                 # [индекс] local | remote
+  api_url: ""                    # для backend=remote
+  api_token: ""
+
+  # кроп бутылки [индекс]
+  crop_enabled: true
+  crop_model: ${paths.models_dir}/yolo11n.pt
+  crop_margin: 0.06
+  crop_min_conf: 0.25
+
+  # ветка этикетки [индекс]
+  label_enabled: true
+  label_model: ${paths.models_dir}/label_det_best.pt
+  label_min_conf: 0.2
+  label_margin: 0.02
+
+  # выбор боксов для ИНДЕКСА (студийные фото) [индекс]
+  crop_pick: big_center          # big_center | big_center_border
+  crop_fallback: orig            # бутылка не найдена: orig — всё фото | label — этикетка по всему фото
+  crop_min_area: 0.0             # мин. площадь бокса бутылки, доля кадра (0 — не фильтровать)
+  label_pick: conf               # conf | conf_size_center
+  label_min_w_frac: 0.0          # отсечь боксы этикетки уже этой доли ширины кропа
+
+  # выбор боксов для ЗАПРОСА (фото с полки); пусто — как у индекса
+  query_crop_pick: big_center_border
+  query_crop_fallback: label
+  query_crop_min_conf: 0.10
+  query_crop_min_area: 0.12
+  query_label_pick: conf
+  query_label_min_w_frac: 0.0
+
+  label_align: false             # [индекс] выравнивание этикетки для retrieval; OCR выравнивает свой кроп сам
+
+  pipeline: combined             # combined | bottle | label
+  top_k: 6                       # шорт-лист retrieval (и длина ответа)
+  thresh_score: 0.81             # гейт: top1 >= — карточка
+  thresh_score_lo: 0.70          # гейт: top1 < — «нет в каталоге»; между — нужно подтверждение OCR
+  thresh_margin: 0.015           # только для отчёта в ответе
+  eval_abstain: false            # true — /v1/eval/predict отдаёт null ниже thresh_score_lo
+
+  database_url: postgresql://vino:vino@db:5432/vino
+
+# ---------------------------------------------------------------- OCR (VLM через OpenRouter)
+ocr:
+  enabled: true
+  model: google/gemini-2.5-flash
+  api_key_env: OPENROUTER_API_KEY
+  api_url: https://openrouter.ai/api/v1/chat/completions
+  temperature: 0.0
+  max_tokens: 700
+  timeout: 120
+  retries: 3
+  min_confidence: 0.30           # ниже — перестановка не рассматривается
+  confirm_confidence: 0.80       # гейт: перестановка OCR подтверждает карточку с этой уверенности
+  use_label_crop: true           # в VLM — кроп этикетки, а не всё фото
+  label_crop: align              # align (бокс + выравнивание) | bbox | bottle | auto
+  label_crop_min_conf: 0.45      # для auto: надёжность бокса этикетки
+  label_crop_min_area: 0.02      #   доля площади кропа бутылки
+  label_crop_max_aspect: 3.0     #   аспект h/w
+  retry_on_poor_fields: true     # сорт не прочитан / не из каталога -> второй вызов по кропу бутылки
+  min_side: 800                  # апскейл кропа перед VLM, px (0 — не трогать)
+  max_side: 1400                 # ограничение размера, px (0 — не трогать)
+
+# ---------------------------------------------------------------- CsvMatcher: поля OCR <-> каталог
+csv_match:
+  weights:
+    winery: 0.15
+    grape: 0.24                  # сорт (и купаж) — главный различитель вин одной линейки
+    color: 0.15                  # красное / белое / розовое
+    wine_type: 0.15              # сахар: сухое / полусухое / полусладкое / сладкое / брют
+    line: 0.20                   # линейка / серия
+    sparkling: 0.07              # игристое / тихое
+    year: 0.02                   # винтаж не критичен
+    additional_text: 0.02
+  token_thresh: 0.72             # порог нечёткого совпадения слова
+  year_only_if_vintage_conflict: false
+  missing_credit: 0.5            # поле, которого нет в записи каталога, — нейтрально
+  min_score: 0.35                # минимальная уверенность для перестановки
+  agree_confidence: 0.80         # гейт: согласие OCR с retrieval подтверждает карточку с этой уверенности
+  grape_from_text: true          # добирать сорт из доп. текста (только сорта из словаря каталога)
+  grape_contain: true            # все сорта с этикетки должны быть в записи
+  fuzzy_ck_norm: true            # ц ≈ к при сравнении сортов
+  enrichment_file: auto          # auto = paths.catalog_ocr_fields; "" — выключить
+  shortlist_only: false          # true — сопоставлять только с шорт-листом retrieval
+  decision_margin: 0.35          # отрыв OCR-кандидата от ответа retrieval, нужный для замены
+
+# ---------------------------------------------------------------- визуальная проверка перестановки
+visual:
+  enabled: true
+  min_similarity: 0.70           # косинус запрос <-> эталонное фото кандидата
+  block_on_mismatch: false       # true — отменять перестановку при низком сходстве

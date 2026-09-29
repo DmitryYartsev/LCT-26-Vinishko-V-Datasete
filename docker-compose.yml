@@ -1,0 +1,163 @@
+# Запуск: заполнить .env (cp .env.example .env) и `docker compose up`.
+# Цепочка: fetch (скачать данные/модели) -> db -> db-init (дамп индекса) -> ml + sommelier -> web.
+# Прогон скрипта-оценщика организаторов: `docker compose run --rm eval` (см. README).
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: vino
+      POSTGRES_PASSWORD: vino
+      POSTGRES_DB: vino
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vino"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    # порт наружу не пробрасываем (не конфликтует с локальным Postgres);
+    # консоль БД: docker compose exec db psql -U vino
+
+  # Скачивание данных/моделей — часть обычного запуска: проверяет артефакты и качает только
+  # отсутствующее (повторный `up` ничего не тянет). Только stdlib python.
+  # Ручной запуск: docker compose run --rm fetch [--status|--check|--force|--only data,dump]
+  fetch:
+    image: python:3.11-slim
+    working_dir: /app
+    volumes:
+      - "./deploy:/app/deploy"
+      - "./data:/app/data"
+      - "./filtered:/app/filtered"
+      - "./models:/app/models"
+    entrypoint: ["python3", "/app/deploy/fetch_data.py"]
+
+  # Разовая инициализация БД: если база пустая — восстанавливает векторы индекса из дампа
+  # (deploy/archives/pgvector.dump, его кладёт fetch). ml ждёт завершения этого шага.
+  db-init:
+    image: pgvector/pgvector:pg16
+    environment:
+      PGHOST: db
+      PGPORT: "5432"
+      PGUSER: vino
+      PGPASSWORD: vino
+      PGDATABASE: vino
+      DUMP_FILE: /deploy/archives/pgvector.dump
+    volumes:
+      - "./deploy:/deploy:ro"
+    entrypoint: ["sh", "/deploy/db_init.sh"]
+    depends_on:
+      db:
+        condition: service_healthy
+      fetch:
+        condition: service_completed_successfully
+
+  ml:
+    build:
+      context: "./ML service"
+    environment:
+      # все параметры пайплайна (модели, кроп, пороги, OCR) — в config/pipeline.yaml
+      PIPELINE_CONFIG: /app/config/pipeline.yaml
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      HF_HUB_OFFLINE: "1"          # энкодер уже лежит в models/ (скачан fetch)
+    volumes:
+      - "./paths.py:/app/paths.py:ro"
+      - "./ML service:/app/ml"
+      - "./filtered:/app/filtered:ro"
+      - "./models:/app/models"
+      - "./config:/app/config:ro"
+      - "./data:/app/ref:ro"
+      - "./ML service/prompts_wine_match.txt:/app/prompts_wine_match.txt:ro"
+      - hfcache:/models_cache
+    depends_on:
+      db:
+        condition: service_healthy
+      db-init:
+        condition: service_completed_successfully
+      fetch:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health', timeout=5)"]
+      interval: 10s
+      timeout: 6s
+      retries: 6
+      # без дампа индекс строится с нуля (~40 мин) — даём запас на первый старт
+      start_period: 60m
+      start_interval: 5s
+    ports:
+      - "8080:8080"
+
+  sommelier:
+    build:
+      context: "./sommelier service"
+    environment:
+      DATABASE_URL: postgresql://vino:vino@db:5432/vino
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      LLM_MODEL: ${LLM_MODEL:-google/gemini-2.5-flash}
+      STT_MODEL: ${STT_MODEL:-google/gemini-2.5-flash}
+    volumes:
+      - "./paths.py:/app/paths.py:ro"
+      - "./sommelier service:/app/sommelier service"
+      # папку монтируем целиком (а не файл catalog.csv): иначе на чистой машине docker
+      # создаёт на месте отсутствующего файла каталог и fetch не может туда распаковать архив
+      - "./filtered:/app/filtered:ro"
+    depends_on:
+      db:
+        condition: service_healthy
+      fetch:
+        condition: service_completed_successfully
+    ports:
+      - "8090:8090"
+
+  web:
+    build:
+      context: "./web"
+    environment:
+      NUXT_ML_URL: http://ml:8080
+      NUXT_SOMMELIER_URL: http://sommelier:8090
+      # 1 — показывать в UI время поиска, сходство и score/margin (для демо)
+      NUXT_PUBLIC_DEBUG_INFO: ${DEBUG_INFO:-0}
+    depends_on:
+      - ml
+      - sommelier
+    ports:
+      - "3000:3000"
+
+  # Скрипт-оценщик организаторов (eval/participant_test.sh) против ml внутри docker-сети.
+  # В обычный `up` не входит (profile). Запуск: docker compose run --rm eval
+  # Другой набор той же структуры (queries/ + queries.tsv): EVAL_DIR=/путь docker compose run --rm eval
+  eval:
+    profiles: ["eval"]
+    build:
+      context: ./deploy
+      dockerfile_inline: |
+        FROM alpine:3.20
+        RUN apk add --no-cache bash curl jq
+    volumes:
+      - "./eval/participant_test.sh:/opt/participant_test.sh:ro"
+      - "./deploy/run_eval.sh:/opt/run_eval.sh:ro"
+      - "${EVAL_DIR:-./eval}:/eval"
+    entrypoint: ["bash", "/opt/run_eval.sh"]
+    depends_on:
+      ml:
+        condition: service_healthy
+
+  # HTTPS перед web — без него браузер не даёт микрофон (голосовой ввод сомелье).
+  # Открывать https://<PUBLIC_HOST>; подробности — в deploy/Caddyfile.
+  https:
+    image: caddy:2-alpine
+    environment:
+      PUBLIC_HOST: ${PUBLIC_HOST:-localhost}
+    volumes:
+      - "./deploy/Caddyfile:/etc/caddy/Caddyfile:ro"
+      # сертификаты и внутренний CA — чтобы после перезапуска браузер не ругался заново
+      - caddydata:/data
+    depends_on:
+      - web
+    ports:
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
+
+volumes:
+  pgdata:
+  hfcache:
+  caddydata:

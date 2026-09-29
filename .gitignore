@@ -1,0 +1,43 @@
+# ВАЖНО: комментарии только на отдельной строке (inline `# ...` git читает как часть паттерна)
+
+# секреты
+.env
+
+# данные и модели — скачивает сервис fetch (deploy/fetch_data.py)
+data/
+filtered/
+models/
+*.pt
+deploy/archives/
+
+# результаты прогона оценщика (docker compose run --rm eval)
+eval/predictions.jsonl
+eval/predictions.jsonl.*.bak
+
+# локальные рабочие папки (исходники организатора, разметка, скрейп, черновики)
+org_files/
+raw_images/
+scraped_raw/
+image_labeling/
+tmp_folders/
+_scratch/
+ML service/index/
+Plans/
+reports/
+
+# python
+.venv/
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+
+# web
+web/node_modules/
+web/.nuxt/
+web/.output/
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+**/__MACOSX/
