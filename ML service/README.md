@@ -19,7 +19,6 @@ FastAPI-сервис (:8080): фото этикетки → карточка в�
 | `pipeline_config.py` | загрузка `config/pipeline.yaml` |
 | `preflight.py` | проверка данных/моделей до старта (понятная ошибка вместо traceback) |
 | `prompts_wine_match.txt` | промпт извлечения полей этикетки для VLM |
-| `static/index.html` | мини-UI на `/` |
 
 ## Запуск
 
@@ -41,7 +40,6 @@ docker compose exec ml python build_index.py --force   # пересобрать 
 |---|---|---|
 | POST | `/v1/eval/predict` | `{"slug", ...}` — для скрипта-оценщика (`docker compose run --rm eval`) |
 | POST | `/v1/search` | top-5 + score/margin/in_catalog + карточка |
-| GET | `/` | мини-UI |
 | GET | `/ref/{slug}` | эталонное фото вина (из `filtered/<slug>/`) |
 | GET | `/wine/{slug}` | карточка по slug |
 | GET | `/health` | статус (модель, размер индекса, crop) |

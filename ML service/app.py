@@ -47,7 +47,6 @@ EVAL_ABSTAIN = os.environ.get("EVAL_ABSTAIN", "0") == "1"
 # ширина short-list: и ответ сервиса, и пул кандидатов для OCR-rerank берутся из
 # конфига (retrieval.top_k).
 TOP_K = int(_cfg.retrieval.get("top_k", 5))
-STATIC = Path(__file__).parent / "static"
 
 app = FastAPI(title="Своё Вино — сканер", version="0.3.0")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
@@ -245,7 +244,3 @@ def health():
             "ocr_model": str(_cfg.ocr.model) if _ocr_enabled else None,
             "models": db.list_models(_conn) if _conn else []}
 
-
-@app.get("/")
-def index():
-    return FileResponse(STATIC / "index.html")

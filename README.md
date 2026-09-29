@@ -23,7 +23,7 @@ docker compose up        # 2. всё остальное — автоматиче
 | Адрес | Что |
 |---|---|
 | http://localhost:3000 | UI (Nuxt, mobile-first) |
-| http://localhost:8080 | ML API: `/health`, мини-UI, `POST /v1/eval/predict` |
+| http://localhost:8080 | ML API: `/health`, `POST /v1/eval/predict`, `POST /v1/search` |
 | http://localhost:8090 | сомелье: `/health` |
 
 Первый запуск сам скачивает то, чего нет в git (сервис `fetch`): каталог и эталоны `data/`,
