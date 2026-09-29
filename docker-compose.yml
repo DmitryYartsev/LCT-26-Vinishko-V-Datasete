@@ -1,3 +1,6 @@
+# Запуск: заполнить .env (cp .env.example .env) и `docker compose up`.
+# Цепочка: fetch (скачать данные/модели) -> db -> db-init (дамп индекса) -> ml + sommelier -> web.
+# Прогон скрипта-оценщика организаторов: `docker compose run --rm eval` (см. README).
 services:
   db:
     image: pgvector/pgvector:pg16
@@ -12,12 +15,24 @@ services:
       interval: 5s
       timeout: 3s
       retries: 20
-    ports:
-      - "5432:5432"
+    # порт наружу не пробрасываем (не конфликтует с локальным Postgres);
+    # консоль БД: docker compose exec db psql -U vino
 
-  # Разовая инициализация БД: если база пустая и есть дамп (deploy/fetch_data.sh кладёт его
-  # в deploy/archives/pgvector.dump) — восстанавливает векторы индекса, иначе просто выходит.
-  # ml ждёт завершения этого шага, поэтому гонки «индекс строится с нуля» не возникает.
+  # Скачивание данных/моделей — часть обычного запуска: проверяет артефакты и качает только
+  # отсутствующее (повторный `up` ничего не тянет). Только stdlib python.
+  # Ручной запуск: docker compose run --rm fetch [--status|--check|--force|--only data,dump]
+  fetch:
+    image: python:3.11-slim
+    working_dir: /app
+    volumes:
+      - "./deploy:/app/deploy"
+      - "./data:/app/data"
+      - "./filtered:/app/filtered"
+      - "./models:/app/models"
+    entrypoint: ["python3", "/app/deploy/fetch_data.py"]
+
+  # Разовая инициализация БД: если база пустая — восстанавливает векторы индекса из дампа
+  # (deploy/archives/pgvector.dump, его кладёт fetch). ml ждёт завершения этого шага.
   db-init:
     image: pgvector/pgvector:pg16
     environment:
@@ -36,48 +51,20 @@ services:
       fetch:
         condition: service_completed_successfully
 
-  # Скачивание данных/моделей — часть обычного запуска: на чистой машине достаточно
-  # `git clone` + `docker compose up --build`. Сервис проверяет артефакты и качает только
-  # отсутствующее (повторный `up` ничего не тянет). Спутники (db-init, ml) ждут его завершения.
-  # Только stdlib python — поэтому берём чистый python-образ.
-  # Ручной запуск: docker compose run --rm fetch [--status|--check|--force|--only data,dump]
-  fetch:
-    image: python:3.11-slim
-    working_dir: /app
-    volumes:
-      - "./deploy:/app/deploy"
-      - "./data:/app/data"
-      - "./filtered:/app/filtered"
-      - "./models:/app/models"
-    entrypoint: ["python3", "/app/deploy/fetch_data.py"]
-
   ml:
     build:
       context: "./ML service"
     environment:
-      DATABASE_URL: postgresql://vino:vino@db:5432/vino
-      SEARCH_ENCODER: ${SEARCH_ENCODER:-auto}
-      SEARCH_MODEL: ${SEARCH_MODEL:-google/siglip2-base-patch16-256}
-      SEARCH_BACKEND: ${SEARCH_BACKEND:-local}
-      SEARCH_API_URL: ${SEARCH_API_URL:-}
-      SEARCH_API_TOKEN: ${SEARCH_API_TOKEN:-}
-      CROP_ENABLED: ${CROP_ENABLED:-1}
-      CROP_MODEL: ${CROP_MODEL:-/app/models/yolo11n.pt}
-      USE_LABEL_BRANCH: ${USE_LABEL_BRANCH:-1}
-      LABEL_MODEL: ${LABEL_MODEL:-/app/models/label_det_best.pt}
-      SEARCH_PIPELINE: ${SEARCH_PIPELINE:-combined}
-      THRESH_SCORE: ${THRESH_SCORE:-0.75}
-      THRESH_MARGIN: ${THRESH_MARGIN:-0.015}
-      # OCR-rerank
-      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      # все параметры пайплайна (модели, кроп, пороги, OCR) — в config/pipeline.yaml
       PIPELINE_CONFIG: /app/config/pipeline.yaml
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      HF_HUB_OFFLINE: "1"          # энкодер уже лежит в models/ (скачан fetch)
     volumes:
       - "./paths.py:/app/paths.py:ro"
       - "./ML service:/app/ml"
       - "./filtered:/app/filtered:ro"
       - "./models:/app/models"
       - "./config:/app/config:ro"
-      # каталог/эталоны — из репозитория (папка data внутри проекта, не ../data)
       - "./data:/app/ref:ro"
       - "./ML service/prompts_wine_match.txt:/app/prompts_wine_match.txt:ro"
       - hfcache:/models_cache
@@ -88,6 +75,14 @@ services:
         condition: service_completed_successfully
       fetch:
         condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health', timeout=5)"]
+      interval: 10s
+      timeout: 6s
+      retries: 6
+      # без дампа индекс строится с нуля (~40 мин) — даём запас на первый старт
+      start_period: 60m
+      start_interval: 5s
     ports:
       - "8080:8080"
 
@@ -126,6 +121,25 @@ services:
       - sommelier
     ports:
       - "3000:3000"
+
+  # Скрипт-оценщик организаторов (eval/participant_test.sh) против ml внутри docker-сети.
+  # В обычный `up` не входит (profile). Запуск: docker compose run --rm eval
+  # Другой набор той же структуры (queries/ + queries.tsv): EVAL_DIR=/путь docker compose run --rm eval
+  eval:
+    profiles: ["eval"]
+    build:
+      context: ./deploy
+      dockerfile_inline: |
+        FROM alpine:3.20
+        RUN apk add --no-cache bash curl jq
+    volumes:
+      - "./eval/participant_test.sh:/opt/participant_test.sh:ro"
+      - "./deploy/run_eval.sh:/opt/run_eval.sh:ro"
+      - "${EVAL_DIR:-./eval}:/eval"
+    entrypoint: ["bash", "/opt/run_eval.sh"]
+    depends_on:
+      ml:
+        condition: service_healthy
 
 volumes:
   pgdata:

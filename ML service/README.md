@@ -1,53 +1,56 @@
-# ML service — инференс-сервис сканера
+# ML service — распознавание вина по фото
 
-FastAPI-сервис: фото этикетки → карточка вина. Ядро — кроп бутылки (YOLO) → эмбеддинг
-(SigLIP 2) → косинусный поиск по индексу каталога (`index/catalog[_crop].npz`).
+FastAPI-сервис (:8080): фото этикетки → карточка вина. Ретривер: кроп бутылки (YOLO) и
+этикетки (дообученный YOLO) → эмбеддинг (SigLIP 2) → косинусный поиск в pgvector (две ветки,
+ответ по максимальному top-1 score). Поверх — OCR-rerank near-duplicates. Все параметры —
+в `config/pipeline.yaml` (OmegaConf; `pipeline_config.py` прокидывает их в env модулей).
 
 ## Файлы
 
 | Файл | Что |
 |---|---|
-| `app.py` | FastAPI: эндпоинты, склейка препроцесс→энкодер→поиск |
-| `encoder.py` | SigLIP 2 / DINOv2 / **OpenRouter-эмбеддинги**: картинка → L2-вектор (`get_encoder()`) |
-| `crop.py` | кроп бутылки (COCO-YOLO), env-выключатель `CROP_ENABLED` |
-| `label_align.py` | постобработка этикетки: выравнивание по 4 углам (rectify, как в Adobe Scan) |
+| `app.py` | FastAPI: эндпоинты, склейка кроп → энкодер → поиск → OCR-rerank |
+| `encoder.py` | SigLIP 2 / DINOv2 / удалённые эмбеддинги: картинка → L2-вектор (`get_encoder()`) |
+| `crop.py` | кроп бутылки (COCO-YOLO) и этикетки; политики кропа индекса и запроса |
+| `label_align.py` | выравнивание этикетки по 4 углам (rectify, как в Adobe Scan) |
 | `ocr_rerank.py` | OCR-rerank: VLM читает кроп этикетки → мэтч по CSV → гейт top1↔top2 |
-| `pipeline.py` / `pipeline_config.py` | standalone-прогон (одиночное фото / eval-CSV) и загрузка YAML |
-| `search.py` | индекс в памяти + косинусный поиск + карточки (`CatalogIndex`) |
-| `build_index.py` | строит `index/catalog[_crop].npz` из `filtered/` (эмбеддинги + crop) |
-| `static/index.html` | мини-UI в стиле «Своё вино» |
-| `index/` | `catalog.npz` / `catalog_crop.npz` (+ meta) — строит `build_index.py` |
+| `db.py` | pgvector: схема, апсерт каталога/векторов, поиск (max cosine по slug) |
+| `build_index.py` | warm-up: сид каталога + эмбеддинги `filtered/` → pgvector (если пусто) |
+| `pipeline_config.py` | загрузка `config/pipeline.yaml` |
+| `preflight.py` | проверка данных/моделей до старта (понятная ошибка вместо traceback) |
+| `prompts_wine_match.txt` | промпт извлечения полей этикетки для VLM |
+| `static/index.html` | мини-UI на `/` |
 
 ## Запуск
 
-```bash
-cd "ML service"
-HF_HUB_OFFLINE=1 uv run uvicorn app:app --host 127.0.0.1 --port 8080
-# открыть http://127.0.0.1:8080/
-```
-
-Индекс должен быть построен заранее (`build_index.py`; эталоны готовит
-`../eda and image filtering/process_images.py`). Кроп в сервисе и в индексе
-обязан совпадать — управляется одним `CROP_ENABLED`.
+Сервис поднимается в составе стека (`docker compose up` в корне, см. корневой README).
+Код смонтирован в контейнер — после правок `docker compose restart ml`.
 
 ```bash
-cd "ML service"
-uv run python build_index.py            # crop по CROP_ENABLED (деф 1)
-uv run python build_index.py --both     # оба индекса (crop off + on)
+docker compose logs -f ml                              # старт / запросы
+docker compose exec ml python preflight.py             # есть ли все данные и модели
+docker compose exec ml python build_index.py --force   # пересобрать индекс (~40 мин на CPU)
 ```
+
+Индекс пересобирать нужно только при смене энкодера или политики кропа индекса
+(`crop_*`, `label_*`, `label_align`); без `--force` warm-up пропускает уже собранные ветки.
 
 ## Эндпоинты
 
 | Метод | Путь | Ответ |
 |---|---|---|
-| POST | `/v1/eval/predict` | `{"slug","score","margin"}` — для скрипта-оценщика |
+| POST | `/v1/eval/predict` | `{"slug", ...}` — для скрипта-оценщика (`docker compose run --rm eval`) |
 | POST | `/v1/search` | top-5 + score/margin/in_catalog + карточка |
 | GET | `/` | мини-UI |
 | GET | `/ref/{slug}` | эталонное фото вина (из `filtered/<slug>/`) |
 | GET | `/wine/{slug}` | карточка по slug |
 | GET | `/health` | статус (модель, размер индекса, crop) |
 
-## Переменные окружения
+## Параметры
+
+Источник правды — `config/pipeline.yaml`: на старте `pipeline_config.apply_retrieval_env()`
+выставляет из него env ниже (поэтому задавать их в `docker-compose.yml` бесполезно —
+правьте YAML). Таблица — справочник по смыслу параметров.
 
 | ENV | Деф. | Смысл |
 |---|---|---|
@@ -60,14 +63,14 @@ uv run python build_index.py --both     # оба индекса (crop off + on)
 | `OCR_LABEL_CROP` | `align` | что подаём VLM как «кроп этикетки»: `align` (истор. — bbox детектора + rectify) │ `bbox` (без выравнивания) │ `bottle` (страховка: детектор этикетки не используется, читаем кроп бутылки) │ `auto` (bbox+rectify, но при ненадёжном боксе — кроп бутылки) |
 | `LABEL_CROP_MIN_CONF` / `LABEL_CROP_MIN_AREA` / `LABEL_CROP_MAX_ASPECT` | `0.45` / `0.02` / `3.0` | пороги «надёжности» бокса этикетки для `OCR_LABEL_CROP=auto` (уверенность, доля площади кропа бутылки, аспект h/w) |
 | `ocr.retry_on_poor_fields` | `false` | страховка на ошибки детектора этикетки: если VLM не прочитал бренд и сорт (или сорт вне словаря каталога) — второй проход VLM **по кропу бутылки** и слияние полей (+1 вызов только для таких фото) |
-| `csv_match.enrichment_file` | `auto` | OCR-разметка каталожных фото (`ML evaluation/catalog_ocr.py` → `data/catalog_ocr_fields.csv`): токены сорта/линейки/сахара и пустой год **дополняются** к записям каталога (исходная разметка не меняется). `auto` = `paths.catalog_ocr_fields` (Docker `/app/ref/…`, хост `<repo>/data/…`), `""`/`none` = выключено, иначе — путь. Мусорные чтения отсекает проверка бренда |
+| `csv_match.enrichment_file` | `auto` | OCR-разметка каталожных фото (`data/catalog_ocr_fields.csv`): токены сорта/линейки/сахара и пустой год **дополняются** к записям каталога (исходная разметка не меняется). `auto` = `paths.catalog_ocr_fields` (`/app/ref/…`), `""`/`none` = выключено, иначе — путь. Мусорные чтения отсекает проверка бренда |
 | `LABEL_ALIGN` | `0` | `1` — выравнивать кроп этикетки по её 4 углам (rectify). Включать симметрично для индекса и запроса (`build_index.py --force`). OCR-тракт выпрямляет свой кроп независимо (см. `ocr.use_label_crop`) |
 | `LABEL_ALIGN_MARGIN` / `LABEL_ALIGN_PAD` | `0.06` / `0.02` | паддинг окна поиска углов / fallback-кропа bbox |
 | `LABEL_ALIGN_MIN_AREA` / `LABEL_ALIGN_MAX_SIDE` | `0.15` / `0.35` | пороги доверия к 4-угольнику (площадь от окна / дисбаланс сторон) |
 | `LABEL_ALIGN_WORK` / `LABEL_AUTO_ORIENT` | `800` / `0` | длинная сторона рабочей копии для поиска углов; доворот результата в портрет |
 | `THRESH_SCORE` / `THRESH_MARGIN` | `0.75` / `0.015` | пороги `in_catalog` (черновые, калибровать) |
 | `EVAL_ABSTAIN` | `0` | `1` — отдавать `null` при низкой уверенности |
-| `HF_HUB_OFFLINE` | — | `1` — модель из кэша, без похода в HuggingFace |
+| `HF_HUB_OFFLINE` | `1` (compose) | не ходить в HuggingFace: энкодер лежит в `models/` |
 
 ### Политика выбора кропа (аудит `reports/15_Crop_audit.md`)
 
@@ -87,13 +90,12 @@ uv run python build_index.py --both     # оба индекса (crop off + on)
 фото каталога та же политика кроп этикетки портит (`reports/16_Query_crop_asymmetry.md`).
 Индекс собирается `crop_*`/`label_*`, запрос — `query_crop_*`/`query_label_*` из
 `config/pipeline.yaml` (`crop.py: use_query_policy()`, переключение вызывает только
-query-тракт: `app.py`, `pipeline.py`, `recall_at_k.py`, `encoder_ab.py`).
+query-тракт `app.py`).
 Кропы эталонов (`VisualVerifier`) — всегда `index_policy()`. Пустое значение
 `query_*` = запрос идёт политикой индекса (прежнее поведение, индекс не трогается).
 
-Симметричный режим (один препроцесс на индекс и запрос, без асимметрии) —
-`config/pipeline.symmetric_v3.yaml` + `build_index.py --force`; он даёт recall@1 0.7419
-против 0.7581 у асимметрии (`reports/16_Query_crop_asymmetry.md`).
+Симметричный режим (один препроцесс на индекс и запрос) давал recall@1 0.7419 против
+0.7581 у асимметрии (`reports/16_Query_crop_asymmetry.md`).
 
 
 ## Выравнивание этикетки — `label_align.py`
@@ -107,12 +109,10 @@ YOLO-детектор этикеток отдаёт только axis-aligned bb
 обычный кроп bbox (модуль не падает на «плохом» входе).
 
 ```bash
-cd "ML service"
-python label_align.py                        # самопроверка на синтетике (10 проверок)
-python label_align.py --image photo.jpg --box 120,300,460,900 --out ./_scratch
-# включить в пайплайне (индекс + запрос) и пересобрать индекс под новый препроцесс:
-LABEL_ALIGN=1 uv run python build_index.py --force
-LABEL_ALIGN=1 uv run uvicorn app:app --host 127.0.0.1 --port 8080
+docker compose exec ml python label_align.py   # самопроверка на синтетике (10 проверок)
+# включить в пайплайне (индекс + запрос): retrieval.label_align: true в config/pipeline.yaml,
+# затем пересобрать индекс под новый препроцесс:
+docker compose exec ml python build_index.py --force && docker compose restart ml
 ```
 
 Как библиотека: `align_label(img, box)`, `maybe_align_label(img, box)`
@@ -151,47 +151,17 @@ LABEL_ALIGN=1 uv run uvicorn app:app --host 127.0.0.1 --port 8080
    `VisualVerifier` (косинус к `start_photos`) — мягкое подтверждение:
    жёстко блокирует только при `visual.block_on_mismatch: true`.
 
-Диагностика в ответе `/v1/search` и в отчёте `pipeline.py --eval-csv`:
+Диагностика — в ответе `/v1/search`:
 `ocr_input` (`label_crop`/`full_image`), `ocr_fields`, `csv_confidence`,
 `csv_margin`, `visual_similarity`. Все параметры — в `config/pipeline.yaml`
 (`ocr.*`, `csv_match.*`, `visual.*`).
 
-```bash
-cd "ML service"
-OPENROUTER_API_KEY=... python pipeline.py --config ../config/pipeline.yaml \
-  --eval-csv data/real_data_with_slug_eval.csv --images-dir "data/Реальные фото"
-```
-
-## Потолок ретривера и харнесс оценки
-
-Ретривер физически не может дать 90%: 12.4% eval-фото правильный slug не
-попадает даже в **top-30**, поэтому потолок любого ре-ранкера по визуальному
-шортлисту ≈ 88% (`ML evaluation/recall_at_k.py`).
-
-```bash
-cd "ML evaluation"
-python3 recall_at_k.py        # recall@K + кэш image top-K
-python3 audit_refs.py         # аудит эталонов/разметки
-python3 selftest_p0.py        # самопроверки P0 (без сети)
-```
-
 ## Замечания
 
-- Индекс **мультивекторный**: на вино может быть несколько фото (несколько строк в npz
-  с одним slug); матч = max cosine по slug (`CatalogIndex.search`).
-- Пути берутся из корневого `paths.py` — хардкода абсолютов нет.
-- Данные (каталог, эталоны, eval-фото, OCR-разметка каталога) лежат **внутри репозитория**
-  в `data/`: смонтированы в контейнер как `/app/ref`, а для прогонов на хосте
-  `pipeline.apply_host_paths()` переписывает пути конфига на `<repo>/...`. Ключ OpenRouter —
-  в `<repo>/.env` (в `.gitignore`).
-- **Отказы OCR.** `402/401/403` от OpenRouter (недостаточно кредитов / неверный ключ) не
-  ретраятся, а `pipeline.run_eval` при массовом отказе OCR (≥10 ошибок и ≥50% фото)
-  останавливает прогон, пишет причину в `ocr_rerank_predictions.csv` (`ocr_error`) и
-  помечает отчёт `degraded: true` — иначе длинный eval молча выдаёт метрику, посчитанную
-  на неработающем OCR.
-- **Прерываемый eval.** `run_eval` каждые `EVAL_DUMP_EVERY` фото (по умолчанию 10) атомарно
-  пишет `ocr_rerank_report.json` с `partial: true`: прерванный прогон (вручную, кредиты,
-  сеть) сохраняет уже посчитанные фото — их можно переиспользовать
-  (`_scratch/merge_eval.py`, `_scratch/split62.py`) вместо повторных вызовов VLM.
-- `_scratch/check_names.py` — статическая проверка «имя используется, но не импортировано»
-  (такой баг однажды уронил `app.py` в 500).
+- Индекс **мультивекторный**: на вино может быть несколько фото (несколько строк в
+  `wine_vectors` с одним slug); матч = max cosine по slug. Вектора разных моделей
+  сосуществуют (колонка `model`), поиск фильтрует по текущей.
+- Данные (каталог, эталоны, OCR-разметка каталога) скачивает сервис `fetch` в `data/` —
+  в контейнере это `/app/ref`. Ключ OpenRouter — в `<repo>/.env`.
+- **Отказы OCR.** `402/401/403` от OpenRouter (кредиты / неверный ключ) не ретраятся:
+  запрос отвечает результатом retrieval.

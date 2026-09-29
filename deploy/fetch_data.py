@@ -1,17 +1,18 @@
 # -*- coding: utf-8 -*-
 """Скачивание данных и моделей для сервиса: Google Drive (архивы) + HuggingFace (энкодер).
 
-Реализация задачи «развернуть на другом сервере»: код и конфиги едут в git, а данные
-(`data/`, `filtered/`), модели (`models/`) и дамп БД (pgvector) лежат в облаке и
-подтягиваются этим скриптом. Большая модель SigLIP2 на облако не выгружается — она
-публичная, качается напрямую из HuggingFace.
+Запускается автоматически сервисом `fetch` при `docker compose up`: код и конфиги едут в git,
+а данные (`data/`, `filtered/`), модели (`models/`) и дамп БД (pgvector) лежат в облаке и
+подтягиваются этим скриптом. Качается только отсутствующее. SigLIP2 публичный — берётся
+напрямую из HuggingFace.
 
 Только стандартная библиотека: ни gdown, ни requests, ни unzip в образе не нужны.
 
-    python3 deploy/fetch_data.py                     # всё: данные, модели, дамп, энкодер
-    python3 deploy/fetch_data.py --only data,dump    # только часть
-    python3 deploy/fetch_data.py --dest /tmp/test    # распаковать в другой корень (проверка)
-    python3 deploy/fetch_data.py --check             # ничего не качать, только проверить ссылки
+    docker compose run --rm fetch                    # всё: данные, модели, дамп, энкодер
+    docker compose run --rm fetch --status           # что уже на диске
+    docker compose run --rm fetch --only data,dump   # только часть
+    docker compose run --rm fetch --force            # перекачать заново
+    docker compose run --rm fetch --check            # ничего не качать, только проверить ссылки
 """
 from __future__ import annotations
 
@@ -34,7 +35,7 @@ ARCHIVES = [
         'gid': '19nvLvudN4DH9whIVgrXJSQQmSAaYpydH',
         'expect': 259_466_482,
         # что должно лежать на диске, чтобы шаг считался выполненным
-        'artifacts': ['data/found_in_catalog_corrected.csv', 'data/eval.csv',
+        'artifacts': ['data/found_in_catalog_corrected.csv',
                       'data/catalog_ocr_fields.csv', 'data/start_photos'],
     },
     {

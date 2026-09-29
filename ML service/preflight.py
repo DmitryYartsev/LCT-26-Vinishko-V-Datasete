@@ -1,12 +1,11 @@
 # -*- coding: utf-8 -*-
 """Предполётная проверка: есть ли данные и модели, без которых сервис не поднимется.
 
-Реализация задачи «развернуть на другом сервере»: файлы кода/конфигов лежат в
-репозитории, а данные (`data/`, `filtered/`), модели (`models/`) и ключ `.env`
-подкладываются на сервере (скрипт загрузки + ручной перенос ключа). Если чего-то нет,
-сервис должен сказать об этом ЧЕЛОВЕЧЕСКИ, а не падать с ошибкой HuggingFace.
+Код и конфиги лежат в репозитории, а данные (`data/`, `filtered/`) и модели (`models/`)
+скачивает сервис `fetch` при `docker compose up`; ключ OpenRouter — в `.env`. Если чего-то
+нет, сервис должен сказать об этом ЧЕЛОВЕЧЕСКИ, а не падать с ошибкой HuggingFace.
 
-    python3 preflight.py [--config ../config/pipeline.yaml]   # на хосте
+    docker compose run --rm ml python preflight.py   # ручная проверка
     (в контейнере вызывается из app.startup до загрузки моделей)
 """
 from __future__ import annotations
@@ -72,9 +71,9 @@ def check(cfg, where: str = 'сервис') -> list:
     print(f'\n[preflight] НЕ ХВАТАЕТ ФАЙЛОВ для запуска ({where}):', flush=True)
     for m in miss:
         print(f'  - {m}', flush=True)
-    print('  Данные/модели кладутся на сервере скриптом загрузки (data/ -> /app/ref, '
-          'models/ -> /app/models, filtered/ -> /app/filtered); ключ — в .env.',
-          flush=True)
+    print('  Данные/модели скачивает сервис fetch (data/ -> /app/ref, models/ -> /app/models, '
+          'filtered/ -> /app/filtered): docker compose logs fetch; '
+          'перекачать — docker compose run --rm fetch --force', flush=True)
     return miss
 
 
@@ -100,13 +99,7 @@ def main(argv=None) -> int:
     _load_repo_env()
     from pipeline_config import load_config
     cfg = load_config(args.config)
-    if args.config is None:                 # локальный прогон: пути из репозитория
-        try:
-            from pipeline import apply_host_paths
-            apply_host_paths(cfg)
-        except Exception:                   # noqa: BLE001 — конфиг и так контейнерный
-            pass
-    miss = check(cfg, where='хостовый прогон')
+    miss = check(cfg, where='ручной прогон')
     if miss:
         return 1
     print('[preflight] всё на месте ✓')

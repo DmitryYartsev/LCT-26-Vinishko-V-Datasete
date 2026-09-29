@@ -1,54 +1,46 @@
+# ВАЖНО: комментарии только на отдельной строке (inline `# ...` git читает как часть паттерна)
+
+# секреты
+.env
+
+# данные и модели — скачивает сервис fetch (deploy/fetch_data.py)
+data/
+filtered/
+models/
+*.pt
+deploy/archives/
+
+# результаты прогона оценщика (docker compose run --rm eval)
+eval/predictions.jsonl
+eval/predictions.jsonl.*.bak
+
+# локальные рабочие папки (исходники организатора, разметка, скрейп, черновики)
+org_files/
+raw_images/
+scraped_raw/
+image_labeling/
+tmp_folders/
+_scratch/
+ML service/index/
+Plans/
+reports/
+
+# python
 .venv/
 __pycache__/
 *.pyc
-
-*.pt
-models/
-models/*.pt
-
-org_files/
-solution/
-raw_images/
-filtered/
-scraped_raw/
-ML service/index/
-models/
-_scratch/
-scraped_raw
-
-ML evaluation/querysets/
-ML evaluation/reports/
-
-ML train/dummy_data/
-ML train/artifacts/
-
-eval/predictions.jsonl
-**/__MACOSX/
 .ipynb_checkpoints/
 
+# web
 web/node_modules/
 web/.nuxt/
 web/.output/
 
+# IDE / OS
 .idea/
 .vscode/
-
-/scraped_raw.7z
-
 .DS_Store
-.env
-eval/.DS_Store
-# ML train/ — источники metric learning коммитим (см. ветку ml-train), игнорируем артефакты
-# ML train/
-ML train/metric_learning/dummy_data/
-ML train/metric_learning/artifacts/
-Plans/
-data/
-data.zip
-reports/
-
-# архивы для выгрузки в облако (deploy/fetch_data.sh качает их на сервере)
-deploy/archives/
+**/__MACOSX/
 
 # --- документация: README коммитим (вернули), ARCHITECTURE.md пока не трогаем ---
 ARCHITECTURE.md

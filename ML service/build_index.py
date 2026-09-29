@@ -4,8 +4,8 @@
 Вызывается на старте сервиса (app.startup) и как CLI. Если векторы уже есть — пропускает
 (если не --force). Размерность vector(D) берётся от текущей модели (env SEARCH_MODEL).
 
-  uv run python build_index.py            # собрать, если пусто
-  uv run python build_index.py --force    # пересобрать
+  docker compose exec ml python build_index.py           # собрать, если пусто
+  docker compose exec ml python build_index.py --force   # пересобрать
 """
 import os, sys, argparse
 from pathlib import Path
@@ -15,6 +15,9 @@ from PIL import Image
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent)); sys.path.insert(0, str(HERE))
+if __name__ == "__main__":           # CLI: env из config/pipeline.yaml ДО импорта encoder/crop (как в app.py)
+    from pipeline_config import load_config, apply_retrieval_env
+    apply_retrieval_env(load_config())
 from paths import FILTERED, CATALOG_CSV
 import db
 import encoder as enc_mod

@@ -45,8 +45,7 @@ THRESH_MARGIN = float(os.environ.get("THRESH_MARGIN", "0.015"))
 SEARCH_PIPELINE = os.environ.get("SEARCH_PIPELINE", "combined").lower()
 EVAL_ABSTAIN = os.environ.get("EVAL_ABSTAIN", "0") == "1"
 # ширина short-list: и ответ сервиса, и пул кандидатов для OCR-rerank берутся из
-# конфига (retrieval.top_k) — иначе сервис и standalone-прогон pipeline.py
-# расходятся (в pipeline.py k читается из конфига).
+# конфига (retrieval.top_k).
 TOP_K = int(_cfg.retrieval.get("top_k", 5))
 STATIC = Path(__file__).parent / "static"
 

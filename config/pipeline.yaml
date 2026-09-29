@@ -7,15 +7,12 @@
 # Внутри YAML допустима интерполяция ${paths.xxx}.
 
 paths:
-  # В Docker эти пути монтируются docker-compose.yml (см. volumes). Для запуска на
-  # хосте замените на абсолютные пути рабочей станции.
+  # Пути внутри контейнера ml: монтируются docker-compose.yml (см. volumes).
   prompt_file: /app/prompts_wine_match.txt
   reference_csv: /app/ref/found_in_catalog_corrected.csv
   start_photos: /app/ref/start_photos
   models_dir: /app/models
-  # OCR-разметка каталожных фото (генератор: ML evaluation/catalog_ocr.py). Лежит РЯДОМ
-  # с каталогом: в Docker /app/ref/..., на хосте `apply_host_paths` переписывает в
-  # <repo>/data/... (см. csv_match.enrichment_file=auto).
+  # OCR-разметка каталожных фото (готовый файл из архива data/, см. csv_match.enrichment_file).
   catalog_ocr_fields: /app/ref/catalog_ocr_fields.csv
 
 # ---------------------------------------------------------------- retrieval (текущая версия пайплайна)
@@ -73,7 +70,6 @@ retrieval:
   eval_abstain: false
   top_k: 6                       # ширина short-list для OCR-rerank (и ответа сервиса)
 
-  # локальный прогон на хосте: postgresql://vino:vino@127.0.0.1:5432/vino
   database_url: postgresql://vino:vino@db:5432/vino
 
 # ---------------------------------------------------------------- OCR (внешняя модель, 1 вызов на фото)
@@ -144,23 +140,23 @@ csv_match:
   # («Мускат Белый» -> muskatbelii), а алиасы дают английскую форму (muscat);
   # без этого сорт обнулялся (кейс 96.61, отчёт 20).
   fuzzy_ck_norm: true
-  # OCR-разметка каталожных фото (ML evaluation/catalog_ocr.py -> data/catalog_ocr_fields.csv):
+  # OCR-разметка каталожных фото (data/catalog_ocr_fields.csv):
   # сорт/линейка/сахар и пустой год ДОПОЛНЯЮТ записи каталога (исходную разметку не меняем).
-  # auto = брать paths.catalog_ocr_fields (в Docker /app/ref, на хосте <repo>/data);
+  # auto = брать paths.catalog_ocr_fields (/app/ref/catalog_ocr_fields.csv);
   # "" / none = выключено; иначе — путь (абсолютный или относительно корня репозитория).
   # Проверено офлайн-реплеем (отчёт 21): 62 без изменений (54/62), 233 +1 кейс (177→178),
   # регрессий 0. Мусорные чтения отсекает проверка бренда (_enr_consistent: 1705 из 2107).
   enrichment_file: auto
   # OCR-rerank работает как re-rank короткого списка retrieval, а НЕ поиск по всем
   # 2108 записям каталога: правильный ответ почти всегда уже в top-k retrieval,
-  # а лишние кандидаты создают ложные «ничьи» (см. ML evaluation/replay_ocr.py).
+  # а лишние кандидаты создают ложные «ничьи».
   shortlist_only: false
   # Гейт доверия к OCR решается в ОДНОЙ шкале: CSV-уверенность OCR-кандидата
   # против CSV-уверенности действующего ответа retrieval. Замена — только с
   # запасом decision_margin (≈ вес одного поля-дискриминатора: одна ошибка по
   # году/цвету/типу). Прежний гейт сравнивал csv_conf с косинусом SigLIP
   # (0.7–0.85) — разные шкалы — и блокировал OCR почти всегда.
-  # 0.20 — пик на 2-fold кросс-валидации eval (ML evaluation/replay_ocr.py):
+  # 0.20 — пик на 2-fold кросс-валидации eval:
   # gain положителен на ОБОИХ фолдах, broken=0.
   decision_margin: 0.35
 
@@ -174,12 +170,3 @@ visual:
   # нет: студийный эталон vs полочное фото часто даёт косинус ниже порога даже
   # для правильного вина).
   block_on_mismatch: false
-
-# ---------------------------------------------------------------- вывод
-output:
-  # Пути монтируются в Docker как /app/... (docker-compose.yml); для прогонов НА ХОСТЕ
-  # pipeline.apply_host_paths() переписывает их в <repo>/data и <repo>/reports, поэтому
-  # машинозависимых абсолютных путей в конфиге нет.
-  eval_csv: /app/ref/real_data_with_slug_eval.csv
-  images_dir: /app/ref/real_photo
-  out_dir: /app/reports

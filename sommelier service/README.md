@@ -49,12 +49,9 @@ docker compose up --build sommelier
 curl localhost:8090/health
 ```
 
-Локально без Docker (нужны Postgres и ffmpeg):
+Перезалить `wine_profiles` после обновления парсинга:
 ```bash
-cd "sommelier service"
-DATABASE_URL=postgresql://vino:vino@localhost:5432/vino OPENROUTER_API_KEY=... \
-  uv run uvicorn app:app --port 8090
-uv run python seed.py --force     # перезалить wine_profiles после обновления парсинга
+docker compose exec sommelier python seed.py --force
 ```
 
 | ENV | По умолч. | Смысл |
