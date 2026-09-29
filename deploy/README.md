@@ -102,6 +102,7 @@ docker compose run --rm fetch --check      # проверить ссылки/р�
 | `файл закрыт: включите доступ «всем, у кого есть ссылка»` | у файла в Google Drive нет публичного доступа |
 | `Google Drive вернул страницу вместо файла` | ссылка/`id` устарели — проверьте `ARCHIVES` в `fetch_data.py` |
 | `это не zip-архив` | файл скачался не полностью: `--force` |
+| `[Errno 21] Is a directory: '.../filtered/catalog.csv'` | docker создал пустой каталог на месте файла (bind-mount файла до скачивания). `fetch` чинит это сам (удаляет каталог и распаковывает архив); если запускали только `sommelier` — удалите каталог вручную (`rmdir filtered/catalog.csv`) и поднимите стек снова |
 | `No space left on device` | нужно ~3 ГБ свободного места (1.4 ГБ модель + архивы + распаковка) |
 | `docker compose up` пишет `dependency failed to start: ... fetch exited (N)` | скачивание упало: `docker compose logs fetch` (нет сети / нет доступа к файлу / мало места) |
 | `[preflight] НЕ ХВАТАЕТ ФАЙЛОВ` | не выполнен `fetch_data.sh` (или упал на середине) |

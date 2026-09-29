@@ -168,11 +168,29 @@ def download_archive(arc: dict, dest_zips: Path, force: bool) -> Path:
     return zip_path
 
 
+def _clear_path_conflicts(zf: zipfile.ZipFile, dest_root: Path) -> None:
+    """Убирает каталоги, которые стоят на месте файлов из архива.
+
+    Типичная причина: docker создаёт пустой каталог под bind-mount файла (например
+    `./filtered/catalog.csv` монтируется в sommelier), если файла на хосте ещё нет.
+    После этого распаковка архива падала с `[Errno 21] Is a directory`.
+    """
+    for info in zf.infolist():
+        if info.is_dir():
+            continue
+        p = dest_root / info.filename
+        if p.is_dir():
+            log(f'    конфликт путей: {info.filename} — на диске каталог, '
+                f'удаляю (его создал docker под bind-mount файла)')
+            shutil.rmtree(p)
+
+
 def extract_zip(zip_path: Path, dest_root: Path) -> None:
     with zipfile.ZipFile(zip_path) as zf:
         bad = zf.testzip()
         if bad:
             raise RuntimeError(f'{zip_path.name}: битый файл внутри архива: {bad}')
+        _clear_path_conflicts(zf, dest_root)
         zf.extractall(dest_root)
 
 
