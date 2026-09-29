@@ -37,6 +37,11 @@ const lastBot = computed(() => {
 async function toggleMic() {
   if (recording.value) { recorder?.stop(); return; }
   error.value = null;
+  // вне secure context браузер вообще не отдаёт mediaDevices — просить разрешение бесполезно
+  if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) {
+    error.value = "Голосовой ввод работает только по HTTPS — откройте сайт через https://.";
+    return;
+  }
   try {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     chunks = [];
@@ -59,7 +64,7 @@ async function toggleMic() {
     recorder.start();
     recording.value = true;
   } catch {
-    error.value = "Нет доступа к микрофону (нужен HTTPS или localhost).";
+    error.value = "Нет доступа к микрофону — разрешите его в настройках браузера.";
   }
 }
 </script>

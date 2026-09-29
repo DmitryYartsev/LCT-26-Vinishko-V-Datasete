@@ -12,6 +12,28 @@ export type LastScan = ScanResult & { photo: string; seconds: number };
 
 const KEY = "svoe-vino-scans-v1";
 const MAX_HISTORY = 30;
+// Фото с телефона (4000px, 3–8 МБ) через медленную сеть/VPN не долетает: соединение рвётся
+// посреди загрузки. Модели столько не нужно (SigLIP — 256px, OCR-кроп этикетки ≤1400px),
+// поэтому ужимаем до 2560px по длинной стороне — выходит ~0.5–1.5 МБ.
+const UPLOAD_MAX_SIDE = 2560;
+const UPLOAD_QUALITY = 0.88;
+
+async function shrink(file: Blob): Promise<Blob> {
+  try {
+    const bmp = await createImageBitmap(file); // EXIF-поворот применяется сам
+    const k = Math.min(1, UPLOAD_MAX_SIDE / Math.max(bmp.width, bmp.height));
+    if (k === 1 && file.size < 1.5e6) { bmp.close(); return file; }
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(bmp.width * k);
+    canvas.height = Math.round(bmp.height * k);
+    canvas.getContext("2d")!.drawImage(bmp, 0, 0, canvas.width, canvas.height);
+    bmp.close();
+    const out = await new Promise<Blob | null>((ok) => canvas.toBlob(ok, "image/jpeg", UPLOAD_QUALITY));
+    return out && out.size < file.size ? out : file;
+  } catch {
+    return file; // не смогли декодировать (напр. HEIC) — шлём как есть
+  }
+}
 
 export function useScanner() {
   const history = useState<string[]>("scan-history", () => []);
@@ -44,9 +66,11 @@ export function useScanner() {
     const t0 = performance.now();
     try {
       const fd = new FormData();
-      fd.append("image", file, (file as File).name || "photo.jpg");
+      fd.append("image", await shrink(file), "photo.jpg");
       if (profile) fd.append("profile", JSON.stringify(profile));
-      const res = await $fetch<ScanResult>("/api/scan", { method: "POST", body: fd });
+      // один повтор — только при обрыве сети (ответа нет вовсе), ошибки сервера не повторяем
+      const post = () => $fetch<ScanResult>("/api/scan", { method: "POST", body: fd });
+      const res = await post().catch((e) => (e?.response ? Promise.reject(e) : post()));
       last.value = { ...res, photo: photo.value!, seconds: (performance.now() - t0) / 1000 };
       if (res.in_catalog && res.top1) {
         remember(res.top1.slug);
