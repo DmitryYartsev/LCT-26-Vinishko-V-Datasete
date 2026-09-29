@@ -1,0 +1,158 @@
+{
+ "note": "pre_ocr_slug -> final_slug = эффект OCR как реранкера; затем карточки, которые держит подтверждение OCR, и контрфакты гейта",
+ "rerank": {
+  "exact": {
+   "per_set": {
+    "62": {
+     "n": 62,
+     "ret": 50,
+     "fin": 54,
+     "fixed": 4,
+     "broken": 0,
+     "switched": 5
+    },
+    "eval2": {
+     "n": 123,
+     "ret": 83,
+     "fin": 83,
+     "fixed": 1,
+     "broken": 1,
+     "switched": 5
+    }
+   },
+   "total": {
+    "n": 185,
+    "ret": 133,
+    "fin": 137,
+    "fixed": 5,
+    "broken": 1,
+    "switched": 10
+   }
+  },
+  "same": {
+   "per_set": {
+    "62": {
+     "n": 62,
+     "ret": 51,
+     "fin": 55,
+     "fixed": 4,
+     "broken": 0,
+     "switched": 5
+    },
+    "eval2": {
+     "n": 123,
+     "ret": 83,
+     "fin": 83,
+     "fixed": 1,
+     "broken": 1,
+     "switched": 5
+    }
+   },
+   "total": {
+    "n": 185,
+    "ret": 134,
+    "fin": 138,
+    "fixed": 5,
+    "broken": 1,
+    "switched": 10
+   }
+  }
+ },
+ "gate": {
+  "marginal_cards": 8,
+  "marginal_cards_correct": 8,
+  "marginal_cards_answer_changed_by_ocr": 0,
+  "marginal": [
+   {
+    "image": "68.81_05-09-2026_15-46-31.webp",
+    "set": "62",
+    "top1": 0.7495,
+    "csv": 0.9586,
+    "stage": "retrieval",
+    "correct": true
+   },
+   {
+    "image": "70.45_04-09-2026_13-35-37.webp",
+    "set": "62",
+    "top1": 0.7454,
+    "csv": 0.988,
+    "stage": "retrieval",
+    "correct": true
+   },
+   {
+    "image": "89.65_19-08-2026_19-48-39.webp",
+    "set": "62",
+    "top1": 0.7887,
+    "csv": 0.8487,
+    "stage": "retrieval",
+    "correct": true
+   },
+   {
+    "image": "abrau-dyurso-abrau-estates-krasnoe-kaberne-sovinon-suhoe-13__02__CC61C362-5E47-4866-88CE-F13EDAD58720_4_5005_c.jpeg",
+    "set": "eval2",
+    "top1": 0.7627,
+    "csv": 0.9151,
+    "stage": "retrieval",
+    "correct": true
+   },
+   {
+    "image": "abrau-dyurso-imperial-kyuve-pino-nuar-rozovoe-bryut-125__01__abrau-dyurso-brut-dor-rose-pino-nuar-rozovoe-bryut-12__img_004_fd0b3759ba.jpg",
+    "set": "eval2",
+    "top1": 0.7904,
+    "csv": 0.9579,
+    "stage": "retrieval",
+    "correct": true
+   },
+   {
+    "image": "chateau-tamagne-eno-amber__01__8C6AC7DA-B757-472A-A8C4-F28B29C05B89_4_5005_c.jpeg",
+    "set": "eval2",
+    "top1": 0.7666,
+    "csv": 0.9014,
+    "stage": "retrieval",
+    "correct": true
+   },
+   {
+    "image": "chteau-le-grand-vostock-pinot-gris-rose-reserve-pino-gri-rozovoe-suhoe-14__01__chteau-le-grand-vostock-chardonnay-shardone-beloe-suhoe-14__img_010_b286e6d0a8.jpg",
+    "set": "eval2",
+    "top1": 0.7692,
+    "csv": 0.9759,
+    "stage": "retrieval",
+    "correct": true
+   },
+   {
+    "image": "di-kaspiko-di-caspico-fiori-di-mare-verde__01__882001A0-0CC7-4B94-92A2-956599CC935E_4_5005_c.jpeg",
+    "set": "eval2",
+    "top1": 0.7466,
+    "csv": 0.8745,
+    "stage": "retrieval",
+    "correct": true
+   }
+  ],
+  "variants": {
+   "визуальный top1>=0.75 (было)": {
+    "cards": 181,
+    "cards_correct": 136,
+    "negatives_accepted": 4,
+    "precision": 0.7351,
+    "recall": 0.951,
+    "f1": 0.8293
+   },
+   "визуальный top1>=0.81 (только HI)": {
+    "cards": 153,
+    "cards_correct": 121,
+    "negatives_accepted": 0,
+    "precision": 0.7908,
+    "recall": 0.7756,
+    "f1": 0.7832
+   },
+   "HI/LO + подтверждение OCR": {
+    "cards": 164,
+    "cards_correct": 131,
+    "negatives_accepted": 0,
+    "precision": 0.7988,
+    "recall": 0.8452,
+    "f1": 0.8213
+   }
+  }
+ }
+}
