@@ -41,6 +41,19 @@ docker compose run --rm fetch --only data,dump  # только часть
 docker compose run --rm fetch --force           # перекачать заново
 ```
 
+## HTTPS (нужен для голосового ввода)
+
+Браузер даёт доступ к микрофону только по HTTPS или на `localhost`, поэтому по
+`http://<ip>:3000` голосовой ввод сомелье не работает. Перед `web` стоит сервис `https`
+(Caddy, конфиг `deploy/Caddyfile`), в `.env` задаётся адрес:
+
+```bash
+PUBLIC_HOST=192.168.1.50        # IP: самоподписанный сертификат, браузер один раз предупредит
+PUBLIC_HOST=1-2-3-4.sslip.io    # домен на IP 1.2.3.4: настоящий Let's Encrypt, нужны порты 80/443
+```
+
+Открывать `https://<PUBLIC_HOST>`. Порты можно переопределить через `HTTP_PORT` / `HTTPS_PORT`.
+
 ## `db-init`
 
 * в БД уже есть вина → ничего не делает;
