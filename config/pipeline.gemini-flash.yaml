@@ -1,0 +1,211 @@
+# Полный конфиг пайплайна предсказаний вина:
+#   1) image retrieval (текущая версия, SigLIP2 + YOLO-кроп + pgvector);
+#   2) OCR-rerank (внешняя модель gpt-4o-mini -> параметры этикетки -> самописный
+#      мэтчинг по референсному CSV -> визуальная проверка фото каталога).
+#
+# Все параметры читаются кодом через OmegaConf (OmegaConf.load(path)).
+# Внутри YAML допустима интерполяция ${paths.xxx}.
+
+paths:
+  # В Docker эти пути монтируются docker-compose.yml (см. volumes). Для запуска на
+  # хосте замените на абсолютные пути рабочей станции.
+  prompt_file: /app/prompts_wine_match.txt
+  reference_csv: /app/ref/found_in_catalog_corrected.csv
+  start_photos: /app/ref/start_photos
+  models_dir: /app/models
+  # OCR-разметка каталожных фото (генератор: ML evaluation/catalog_ocr.py). Лежит РЯДОМ
+  # с каталогом: в Docker /app/ref/..., на хосте `apply_host_paths` переписывает в
+  # <repo>/data/... (см. csv_match.enrichment_file=auto).
+  catalog_ocr_fields: /app/ref/catalog_ocr_fields.csv
+
+# ---------------------------------------------------------------- retrieval (текущая версия пайплайна)
+retrieval:
+  model: ${paths.models_dir}/siglip2-base-patch16-256   # путь ЗАГРУЗКИ энкодера
+  index_model: /app/models/siglip2-base-patch16-256     # ключ модели в pgvector
+  encoder: auto                  # auto | siglip | dinov2
+  backend: local                 # local | remote
+  api_url: ""                    # для backend=remote
+  api_token: ""
+
+  crop_enabled: true
+  crop_model: ${paths.models_dir}/yolo11n.pt
+  crop_margin: 0.06
+  crop_min_conf: 0.25
+
+  label_enabled: true            # USE_LABEL_BRANCH
+  label_model: ${paths.models_dir}/label_det_best.pt
+  label_min_conf: 0.2
+  label_margin: 0.02
+  # --- политика выбора боксов (аудит Reports/15_Crop_audit.md, 16) ---------------
+  # ИНДЕКС (`build_index.py`) собирается этими значениями. Исторические значения =
+  # прежнее поведение (индекс уже собран так); менять их — только вместе с
+  # `build_index.py --force`.
+  crop_pick: big_center          # big_center (истор.) | big_center_border
+  crop_fallback: orig            # orig (истор.) | label — этикетка прямо по фото
+  crop_min_area: 0.0             # мин. площадь бокса бутылки, доля кадра (0 — не фильтровать)
+  label_pick: conf               # conf (истор.) | conf_size_center
+  label_min_w_frac: 0.0          # отсечь боксы этикетки уже этой доли ширины кропа
+  # ЗАПРОС (UGC-фото полки) — отдельная политика, индекс НЕ пересобирается
+  # (Reports/16_Query_crop_asymmetry.md). v3-рецепт: бутылочный детектор молчит на
+  # 24% фото, а при conf 0.10 вылезают крошечные ложные боксы — их режет min_area,
+  # и этикетка берётся прямо с фото: recall@1 0.6774 -> 0.7581 (+5 кейсов, 0 регрессий).
+  # Пустое значение = запрос идёт политикой индекса (откат к прежнему поведению).
+  query_crop_pick: big_center_border
+  query_crop_fallback: label
+  query_crop_min_conf: 0.10
+  query_crop_min_area: 0.12
+  query_label_pick: conf
+  query_label_min_w_frac: 0.0
+  # Отклонённые варианты (детали и числа — в отчётах): симметричный v2-набор
+  # (crop_pick big_center_border + fallback label + label_pick conf_size_center +
+  # label_min_w_frac 0.35) детекторно лучше (бутылка 75.8% -> 90.3%, флаги 40% -> 29%),
+  # но при пересборке индекса recall@1 падает до 0.6452 — не применять к индексу;
+  # симметричный v3 — 0.7419 (на 1 кейс хуже асимметрии), годится как fallback, если
+  # разная политика запроса/индекса нежелательна.
+  # LABEL_ALIGN (rectify по 4 углам этикетки). Влияет и на индекс, и на запрос —
+  # включать только симметрично с build_index.py --force. Для OCR-тракта это НЕ
+  # нужно: ocr.use_label_crop сам выпрямляет кроп только для VLM (индекс не трогаем).
+  label_align: false
+
+  pipeline: combined             # combined | bottle | label
+  thresh_score: 0.81              # HI: top1 >= этого — карточка (сильное визуальное совпадение)
+  thresh_score_lo: 0.70           # LO: ниже этого — сразу «нет в каталоге» (сценарий похожих)
+  thresh_margin: 0.015
+  eval_abstain: false
+  top_k: 6                       # ширина short-list для OCR-rerank (и ответа сервиса)
+
+  # локальный прогон на хосте: postgresql://vino:vino@127.0.0.1:5432/vino
+  database_url: postgresql://vino:vino@db:5432/vino
+
+# ---------------------------------------------------------------- OCR (внешняя модель, 1 вызов на фото)
+ocr:
+  enabled: true
+  model: google/gemini-2.5-flash
+  api_key_env: OPENROUTER_API_KEY
+  api_url: https://openrouter.ai/api/v1/chat/completions
+  temperature: 0.0
+  max_tokens: 700
+  timeout: 120
+  retries: 3
+  min_confidence: 0.30           # ниже этого OCR-мэтч не рассматриваем вообще
+  confirm_confidence: 0.80       # гейт: между LO и HI карточка только при такой уверенности OCR
+  # VLM подаём ВЫПРЯМЛЕННЫЙ кроп этикетки (rectify по 4 углам), а не сырое полочное
+  # фото — иначе мелкий наклонный год/цвет/тип не вычитывается. Выравнивание тут
+  # форсируется независимо от retrieval.label_align (индекс не пересобирается).
+  use_label_crop: true
+  # Что подаём VLM: align (bbox детектора этикетки + rectify, историч.) │ bbox │
+  # bottle (страховка: без детектора этикетки, читаем кроп бутылки) │ auto (rectify,
+  # но при ненадёжном боксе — кроп бутылки). Отчёты 19/20: детектор этикеток иногда
+  # обрезает надписи (87.09, 87.54, 94.02, 95.63).
+  label_crop: align
+  label_crop_min_conf: 0.45      # пороги «надёжности» бокса для auto
+  label_crop_min_area: 0.02      # доля площади кропа бутылки
+  label_crop_max_aspect: 3.0     # аспект h/w бокса этикетки
+  # Страховка на ошибки детектора этикетки/rectify: если VLM прочитал кроп плохо
+  # (нет бренда и сорта, либо сорт вне словаря каталога) — второй проход VLM по КРОПУ
+  # БУТЫЛКИ с слиянием полей (+1 вызов VLM только для таких фото). Отчёт 20.
+  # Включено: 62 → 0.8387 → 0.8710 (починены 48.98 и 96.96, регрессий 0); страховка
+  # срабатывает на ~20% фото. Полная замена на кроп бутылки (`label_crop: bottle`)
+  # даёт тот же результат, но читает кроп бутылки для ВСЕХ фото.
+  retry_on_poor_fields: true
+  min_side: 800                  # апскейл мелкого кропа этикетки перед VLM, px (0 — не трогать)
+  max_side: 1400                 # ограничение размера (токены/латентность), px (0 — не трогать)
+
+# ---------------------------------------------------------------- самописный мэтчинг по параметрам
+csv_match:
+  # near-dup «сёстры» одной линейки различаются сортом, линейкой, цветом и типом.
+  # Организаторы: критичны винодельня/сорт/сахар/тип/линейка; год (винтаж) — НЕ критичен.
+  # Поэтому год ~0, а сорт и линейка (line) весят больше всего.
+  weights:
+    winery: 0.15
+    grape: 0.24                  # сорт (в т.ч. купаж) — главный дискриминатор
+    color: 0.15                  # красное/белое/розовое (без «игристое»!)
+    wine_type: 0.15              # сухое/полусухое/полусладкое/сладкое/брют
+    line: 0.20                   # линейка/серия (line ИЛИ additional_text)
+    sparkling: 0.07              # класс: игристое/шампанское ⟷ тихое
+    year: 0.02                   # винтаж: не критичен
+    additional_text: 0.02
+  token_thresh: 0.72             # fuzzy-порог покрытия токена
+  # год учитываем ВСЕГДА (дискриминатор винтажей). true — включать только когда в
+  # базе есть одно вино разных годов (одна основа слага с разными суффиксами).
+  year_only_if_vintage_conflict: false
+  # Поле, которого нет у записи каталога, — НЕЙТРАЛЬНО (0.5), а не 0 и не 1:
+  # иначе пустые записи («Мускат» без цвета/типа) набирали ложную уверенность.
+  missing_credit: 0.5
+  min_score: 0.35                # ниже — OCR-мэтч не засчитываем
+  agree_confidence: 0.80         # гейт: «OCR согласен с retrieval» считается подтверждением с этой уверенности
+  # Сорт из дополнительного текста (`additional_text`/`raw_text`): VLM часто пишет туда
+  # сорт, который не опознал как поле grape («Рубин» у Денисова/Табии, «Цитрон 2024»).
+  # Добираем только токены из словаря сортов каталога (отчёты 19/20).
+  # Включено: 62 → 51→52 кейса при том же гейте (0 регрессий), 233 → те же 177, но
+  # регрессий 1 вместо 3; при margin 0.20 — 179/233.
+  grape_from_text: true
+  # «Покрытие сорта»: к F1 добавляем проверку, что все сорта из OCR есть в записи.
+  # F1 штрафовал купажную запись за «лишние» сорта сильнее, чем односортного близнеца.
+  grape_contain: true
+  # c/k-толерантность фаззи-сравнения сорта: каталог склеивает слова
+  # («Мускат Белый» -> muskatbelii), а алиасы дают английскую форму (muscat);
+  # без этого сорт обнулялся (кейс 96.61, отчёт 20).
+  fuzzy_ck_norm: true
+  # OCR-разметка каталожных фото (ML evaluation/catalog_ocr.py -> data/catalog_ocr_fields.csv):
+  # сорт/линейка/сахар и пустой год ДОПОЛНЯЮТ записи каталога (исходную разметку не меняем).
+  # auto = брать paths.catalog_ocr_fields (в Docker /app/ref, на хосте <repo>/data);
+  # "" / none = выключено; иначе — путь (абсолютный или относительно корня репозитория).
+  # Проверено офлайн-реплеем (отчёт 21): 62 без изменений (54/62), 233 +1 кейс (177→178),
+  # регрессий 0. Мусорные чтения отсекает проверка бренда (_enr_consistent: 1705 из 2107).
+  enrichment_file: auto
+  # OCR-rerank работает как re-rank короткого списка retrieval, а НЕ поиск по всем
+  # 2108 записям каталога: правильный ответ почти всегда уже в top-k retrieval,
+  # а лишние кандидаты создают ложные «ничьи» (см. ML evaluation/replay_ocr.py).
+  shortlist_only: false
+  # Гейт доверия к OCR решается в ОДНОЙ шкале: CSV-уверенность OCR-кандидата
+  # против CSV-уверенности действующего ответа retrieval. Замена — только с
+  # запасом decision_margin (≈ вес одного поля-дискриминатора: одна ошибка по
+  # году/цвету/типу). Прежний гейт сравнивал csv_conf с косинусом SigLIP
+  # (0.7–0.85) — разные шкалы — и блокировал OCR почти всегда.
+  # 0.20 — пик на 2-fold кросс-валидации eval (ML evaluation/replay_ocr.py):
+  # gain положителен на ОБОИХ фолдах, broken=0.
+  decision_margin: 0.35
+
+
+# ---------------------------------------------------------------- текстовый путь (P0-2)
+# Полнокаталожный поиск по полям этикетки (CsvMatcher + e5). Нужен, потому что
+# правильный SKU near-dup часто НЕ попадает в визуальный top-30, а текст его
+# различает: union(image top-30, text top-10) покрывает ~94% истины против ~88%
+# у одного image top-30 (ML evaluation/union_text_eval.py).
+text:
+  enabled: true
+  use_e5: true
+  e5_model: intfloat/multilingual-e5-small
+  e5_weight: 0.5                 # вес e5 в комбинированной оценке (1-w — CsvMatcher)
+  top_k: 10                      # ширина текстового пула для union
+
+# ---------------------------------------------------------------- fusion-ранкер (P0-3)
+# Калиброванный линейный ранкер над объединённым пулом. Веса обучает
+# `ML evaluation/train_fusion.py` (2-fold CV, hill-climb по accuracy) в
+# fusion_weights.json. enabled:false -> работает прежний жёсткий гейт decide().
+fusion:
+  enabled: false
+  weights_file: ${paths.models_dir}/fusion_weights.json
+  image_k: 30
+  text_k: 10
+
+
+# ---------------------------------------------------------------- визуальная проверка
+visual:
+  enabled: true
+  min_similarity: 0.70           # косинус SigLIP2: запрос vs фото каталога (start_photos)
+  # visual — мягкий ПОДТВЕРЖДАЮЩИЙ сигнал (косинус к start_photos). true —
+  # визуальный mismatch жёстко блокирует даже решающий OCR-ответ (по умолчанию
+  # нет: студийный эталон vs полочное фото часто даёт косинус ниже порога даже
+  # для правильного вина).
+  block_on_mismatch: false
+
+# ---------------------------------------------------------------- вывод
+output:
+  # Пути монтируются в Docker как /app/... (docker-compose.yml); для прогонов НА ХОСТЕ
+  # pipeline.apply_host_paths() переписывает их в <repo>/data и <repo>/reports, поэтому
+  # машинозависимых абсолютных путей в конфиге нет.
+  eval_csv: /app/ref/real_data_with_slug_eval.csv
+  images_dir: /app/ref/real_photo
+  out_dir: /app/reports

@@ -1,0 +1,200 @@
+{
+ "note": "изолированный замер: 2 картинки x 3 вызова на модель, тот же промпт/параметры, что в пайплайне",
+ "models": {
+  "openai/gpt-4o-mini": {
+   "per_image": {
+    "48.98_02-09-2026_18-34-15.webp": {
+     "times_s": [
+      13.38,
+      10.35,
+      10.21
+     ],
+     "mean_s": 11.31,
+     "tokens": [
+      {
+       "prompt_tokens": 26866,
+       "completion_tokens": 161,
+       "total_tokens": 27027
+      },
+      {
+       "prompt_tokens": 26866,
+       "completion_tokens": 159,
+       "total_tokens": 27025
+      },
+      {
+       "prompt_tokens": 26866,
+       "completion_tokens": 161,
+       "total_tokens": 27027
+      }
+     ],
+     "fields_ok": true
+    },
+    "68.81_05-09-2026_15-46-31.webp": {
+     "times_s": [
+      10.53,
+      11.87,
+      10.62
+     ],
+     "mean_s": 11.01,
+     "tokens": [
+      {
+       "prompt_tokens": 26866,
+       "completion_tokens": 166,
+       "total_tokens": 27032
+      },
+      {
+       "prompt_tokens": 26866,
+       "completion_tokens": 166,
+       "total_tokens": 27032
+      },
+      {
+       "prompt_tokens": 26866,
+       "completion_tokens": 166,
+       "total_tokens": 27032
+      }
+     ],
+     "fields_ok": true
+    }
+   },
+   "mean_s": 11.16,
+   "median_s": 10.57,
+   "min_s": 10.21,
+   "max_s": 13.38,
+   "tokens_mean": {
+    "prompt_tokens": 26866,
+    "completion_tokens": 163.2,
+    "total_tokens": 27029.2
+   }
+  },
+  "google/gemini-2.5-flash": {
+   "per_image": {
+    "48.98_02-09-2026_18-34-15.webp": {
+     "times_s": [
+      7.21,
+      11.29,
+      10.84
+     ],
+     "mean_s": 9.78,
+     "tokens": [
+      {
+       "prompt_tokens": 2662,
+       "completion_tokens": 190,
+       "total_tokens": 2852
+      },
+      {
+       "prompt_tokens": 2662,
+       "completion_tokens": 190,
+       "total_tokens": 2852
+      },
+      {
+       "prompt_tokens": 2662,
+       "completion_tokens": 190,
+       "total_tokens": 2852
+      }
+     ],
+     "fields_ok": true
+    },
+    "68.81_05-09-2026_15-46-31.webp": {
+     "times_s": [
+      11.95,
+      10.97,
+      6.16
+     ],
+     "mean_s": 9.69,
+     "tokens": [
+      {
+       "prompt_tokens": 2662,
+       "completion_tokens": 236,
+       "total_tokens": 2898
+      },
+      {
+       "prompt_tokens": 2662,
+       "completion_tokens": 236,
+       "total_tokens": 2898
+      },
+      {
+       "prompt_tokens": 2662,
+       "completion_tokens": 236,
+       "total_tokens": 2898
+      }
+     ],
+     "fields_ok": true
+    }
+   },
+   "mean_s": 9.74,
+   "median_s": 10.91,
+   "min_s": 6.16,
+   "max_s": 11.95,
+   "tokens_mean": {
+    "prompt_tokens": 2662,
+    "completion_tokens": 213,
+    "total_tokens": 2875
+   }
+  },
+  "google/gemini-2.5-flash-lite": {
+   "per_image": {
+    "48.98_02-09-2026_18-34-15.webp": {
+     "times_s": [
+      3.38,
+      6.14,
+      5.27
+     ],
+     "mean_s": 4.93,
+     "tokens": [
+      {
+       "prompt_tokens": 2662,
+       "completion_tokens": 198,
+       "total_tokens": 2860
+      },
+      {
+       "prompt_tokens": 2662,
+       "completion_tokens": 198,
+       "total_tokens": 2860
+      },
+      {
+       "prompt_tokens": 2662,
+       "completion_tokens": 154,
+       "total_tokens": 2816
+      }
+     ],
+     "fields_ok": true
+    },
+    "68.81_05-09-2026_15-46-31.webp": {
+     "times_s": [
+      6.22,
+      4.27,
+      8.39
+     ],
+     "mean_s": 6.29,
+     "tokens": [
+      {
+       "prompt_tokens": 2662,
+       "completion_tokens": 209,
+       "total_tokens": 2871
+      },
+      {
+       "prompt_tokens": 2662,
+       "completion_tokens": 209,
+       "total_tokens": 2871
+      },
+      {
+       "prompt_tokens": 2662,
+       "completion_tokens": 209,
+       "total_tokens": 2871
+      }
+     ],
+     "fields_ok": true
+    }
+   },
+   "mean_s": 5.61,
+   "median_s": 5.71,
+   "min_s": 3.38,
+   "max_s": 8.39,
+   "tokens_mean": {
+    "prompt_tokens": 2662,
+    "completion_tokens": 196.2,
+    "total_tokens": 2858.2
+   }
+  }
+ }
+}

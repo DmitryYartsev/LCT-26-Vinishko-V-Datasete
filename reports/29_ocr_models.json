@@ -1,0 +1,2990 @@
+{
+ "openai/gpt-4o-mini": {
+  "accuracy_prf": {
+   "exact": {
+    "sets": {
+     "62": {
+      "n": 62,
+      "ret_ok": 50,
+      "fin_ok": 54,
+      "hits_ret": {
+       "1": 50,
+       "5": 53,
+       "10": 53,
+       "30": 55
+      },
+      "hits_ocr": {
+       "1": 54,
+       "5": 57,
+       "10": 57,
+       "30": 58
+      },
+      "run_n": 62,
+      "sec": 1228.2,
+      "seconds_per_photo": 19.81,
+      "ocr_errors": 0,
+      "accuracy_retrieval": 0.8065,
+      "accuracy_final": 0.871,
+      "prf_retrieval": {
+       "@1": {
+        "hits": 50,
+        "precision": 0.8065,
+        "recall": 0.8065,
+        "f1": 0.8065
+       },
+       "@5": {
+        "hits": 53,
+        "precision": 0.171,
+        "recall": 0.8548,
+        "f1": 0.2849
+       },
+       "@10": {
+        "hits": 53,
+        "precision": 0.0855,
+        "recall": 0.8548,
+        "f1": 0.1554
+       },
+       "@30": {
+        "hits": 55,
+        "precision": 0.0296,
+        "recall": 0.8871,
+        "f1": 0.0572
+       }
+      },
+      "prf_ocr_order": {
+       "@1": {
+        "hits": 54,
+        "precision": 0.871,
+        "recall": 0.871,
+        "f1": 0.871
+       },
+       "@5": {
+        "hits": 57,
+        "precision": 0.1839,
+        "recall": 0.9194,
+        "f1": 0.3065
+       },
+       "@10": {
+        "hits": 57,
+        "precision": 0.0919,
+        "recall": 0.9194,
+        "f1": 0.1672
+       },
+       "@30": {
+        "hits": 58,
+        "precision": 0.0312,
+        "recall": 0.9355,
+        "f1": 0.0604
+       }
+      }
+     },
+     "rest171": {
+      "n": 171,
+      "ret_ok": 128,
+      "fin_ok": 134,
+      "hits_ret": {
+       "1": 128,
+       "5": 151,
+       "10": 152,
+       "30": 155
+      },
+      "hits_ocr": {
+       "1": 134,
+       "5": 154,
+       "10": 155,
+       "30": 157
+      },
+      "run_n": 171,
+      "sec": 3008.0,
+      "seconds_per_photo": 17.59,
+      "ocr_errors": 0,
+      "accuracy_retrieval": 0.7485,
+      "accuracy_final": 0.7836,
+      "prf_retrieval": {
+       "@1": {
+        "hits": 128,
+        "precision": 0.7485,
+        "recall": 0.7485,
+        "f1": 0.7485
+       },
+       "@5": {
+        "hits": 151,
+        "precision": 0.1766,
+        "recall": 0.883,
+        "f1": 0.2943
+       },
+       "@10": {
+        "hits": 152,
+        "precision": 0.0889,
+        "recall": 0.8889,
+        "f1": 0.1616
+       },
+       "@30": {
+        "hits": 155,
+        "precision": 0.0302,
+        "recall": 0.9064,
+        "f1": 0.0585
+       }
+      },
+      "prf_ocr_order": {
+       "@1": {
+        "hits": 134,
+        "precision": 0.7836,
+        "recall": 0.7836,
+        "f1": 0.7836
+       },
+       "@5": {
+        "hits": 154,
+        "precision": 0.1801,
+        "recall": 0.9006,
+        "f1": 0.3002
+       },
+       "@10": {
+        "hits": 155,
+        "precision": 0.0906,
+        "recall": 0.9064,
+        "f1": 0.1648
+       },
+       "@30": {
+        "hits": 157,
+        "precision": 0.0306,
+        "recall": 0.9181,
+        "f1": 0.0592
+       }
+      }
+     },
+     "eval2": {
+      "n": 105,
+      "ret_ok": 76,
+      "fin_ok": 76,
+      "hits_ret": {
+       "1": 78,
+       "5": 96,
+       "10": 97,
+       "30": 98
+      },
+      "hits_ocr": {
+       "1": 76,
+       "5": 96,
+       "10": 97,
+       "30": 98
+      },
+      "run_n": 123,
+      "sec": 2197.1,
+      "seconds_per_photo": 17.86,
+      "ocr_errors": 0,
+      "accuracy_retrieval": 0.7238,
+      "accuracy_final": 0.7238,
+      "prf_retrieval": {
+       "@1": {
+        "hits": 78,
+        "precision": 0.7429,
+        "recall": 0.7429,
+        "f1": 0.7429
+       },
+       "@5": {
+        "hits": 96,
+        "precision": 0.1829,
+        "recall": 0.9143,
+        "f1": 0.3048
+       },
+       "@10": {
+        "hits": 97,
+        "precision": 0.0924,
+        "recall": 0.9238,
+        "f1": 0.168
+       },
+       "@30": {
+        "hits": 98,
+        "precision": 0.0311,
+        "recall": 0.9333,
+        "f1": 0.0602
+       }
+      },
+      "prf_ocr_order": {
+       "@1": {
+        "hits": 76,
+        "precision": 0.7238,
+        "recall": 0.7238,
+        "f1": 0.7238
+       },
+       "@5": {
+        "hits": 96,
+        "precision": 0.1829,
+        "recall": 0.9143,
+        "f1": 0.3048
+       },
+       "@10": {
+        "hits": 97,
+        "precision": 0.0924,
+        "recall": 0.9238,
+        "f1": 0.168
+       },
+       "@30": {
+        "hits": 98,
+        "precision": 0.0311,
+        "recall": 0.9333,
+        "f1": 0.0602
+       }
+      }
+     }
+    },
+    "groups": {
+     "233 (62+171)": {
+      "n": 233,
+      "ret_ok": 178,
+      "fin_ok": 188,
+      "hits_ret": {
+       "1": 178,
+       "5": 204,
+       "10": 205,
+       "30": 210
+      },
+      "hits_ocr": {
+       "1": 188,
+       "5": 211,
+       "10": 212,
+       "30": 215
+      },
+      "seconds_per_photo": 18.18,
+      "ocr_errors": 0,
+      "sec": 4236.2,
+      "run_n": 233,
+      "accuracy_retrieval": 0.7639,
+      "accuracy_final": 0.8069,
+      "prf_retrieval": {
+       "@1": {
+        "hits": 178,
+        "precision": 0.7639,
+        "recall": 0.7639,
+        "f1": 0.7639
+       },
+       "@5": {
+        "hits": 204,
+        "precision": 0.1751,
+        "recall": 0.8755,
+        "f1": 0.2918
+       },
+       "@10": {
+        "hits": 205,
+        "precision": 0.088,
+        "recall": 0.8798,
+        "f1": 0.16
+       },
+       "@30": {
+        "hits": 210,
+        "precision": 0.03,
+        "recall": 0.9013,
+        "f1": 0.0581
+       }
+      },
+      "prf_ocr_order": {
+       "@1": {
+        "hits": 188,
+        "precision": 0.8069,
+        "recall": 0.8069,
+        "f1": 0.8069
+       },
+       "@5": {
+        "hits": 211,
+        "precision": 0.1811,
+        "recall": 0.9056,
+        "f1": 0.3019
+       },
+       "@10": {
+        "hits": 212,
+        "precision": 0.091,
+        "recall": 0.9099,
+        "f1": 0.1654
+       },
+       "@30": {
+        "hits": 215,
+        "precision": 0.0308,
+        "recall": 0.9227,
+        "f1": 0.0595
+       }
+      }
+     },
+     "eval2 (после прунинга)": {
+      "n": 105,
+      "ret_ok": 76,
+      "fin_ok": 76,
+      "hits_ret": {
+       "1": 78,
+       "5": 96,
+       "10": 97,
+       "30": 98
+      },
+      "hits_ocr": {
+       "1": 76,
+       "5": 96,
+       "10": 97,
+       "30": 98
+      },
+      "seconds_per_photo": 17.86,
+      "ocr_errors": 0,
+      "sec": 2197.1,
+      "run_n": 123,
+      "accuracy_retrieval": 0.7238,
+      "accuracy_final": 0.7238,
+      "prf_retrieval": {
+       "@1": {
+        "hits": 78,
+        "precision": 0.7429,
+        "recall": 0.7429,
+        "f1": 0.7429
+       },
+       "@5": {
+        "hits": 96,
+        "precision": 0.1829,
+        "recall": 0.9143,
+        "f1": 0.3048
+       },
+       "@10": {
+        "hits": 97,
+        "precision": 0.0924,
+        "recall": 0.9238,
+        "f1": 0.168
+       },
+       "@30": {
+        "hits": 98,
+        "precision": 0.0311,
+        "recall": 0.9333,
+        "f1": 0.0602
+       }
+      },
+      "prf_ocr_order": {
+       "@1": {
+        "hits": 76,
+        "precision": 0.7238,
+        "recall": 0.7238,
+        "f1": 0.7238
+       },
+       "@5": {
+        "hits": 96,
+        "precision": 0.1829,
+        "recall": 0.9143,
+        "f1": 0.3048
+       },
+       "@10": {
+        "hits": 97,
+        "precision": 0.0924,
+        "recall": 0.9238,
+        "f1": 0.168
+       },
+       "@30": {
+        "hits": 98,
+        "precision": 0.0311,
+        "recall": 0.9333,
+        "f1": 0.0602
+       }
+      }
+     },
+     "ИТОГО": {
+      "n": 338,
+      "ret_ok": 254,
+      "fin_ok": 264,
+      "hits_ret": {
+       "1": 256,
+       "5": 300,
+       "10": 302,
+       "30": 308
+      },
+      "hits_ocr": {
+       "1": 264,
+       "5": 307,
+       "10": 309,
+       "30": 313
+      },
+      "seconds_per_photo": 18.07,
+      "ocr_errors": 0,
+      "sec": 6433.299999999999,
+      "run_n": 356,
+      "accuracy_retrieval": 0.7515,
+      "accuracy_final": 0.7811,
+      "prf_retrieval": {
+       "@1": {
+        "hits": 256,
+        "precision": 0.7574,
+        "recall": 0.7574,
+        "f1": 0.7574
+       },
+       "@5": {
+        "hits": 300,
+        "precision": 0.1775,
+        "recall": 0.8876,
+        "f1": 0.2959
+       },
+       "@10": {
+        "hits": 302,
+        "precision": 0.0893,
+        "recall": 0.8935,
+        "f1": 0.1625
+       },
+       "@30": {
+        "hits": 308,
+        "precision": 0.0304,
+        "recall": 0.9112,
+        "f1": 0.0588
+       }
+      },
+      "prf_ocr_order": {
+       "@1": {
+        "hits": 264,
+        "precision": 0.7811,
+        "recall": 0.7811,
+        "f1": 0.7811
+       },
+       "@5": {
+        "hits": 307,
+        "precision": 0.1817,
+        "recall": 0.9083,
+        "f1": 0.3028
+       },
+       "@10": {
+        "hits": 309,
+        "precision": 0.0914,
+        "recall": 0.9142,
+        "f1": 0.1662
+       },
+       "@30": {
+        "hits": 313,
+        "precision": 0.0309,
+        "recall": 0.926,
+        "f1": 0.0597
+       }
+      }
+     }
+    }
+   },
+   "same": {
+    "sets": {
+     "62": {
+      "n": 62,
+      "ret_ok": 51,
+      "fin_ok": 55,
+      "hits_ret": {
+       "1": 51,
+       "5": 53,
+       "10": 53,
+       "30": 55
+      },
+      "hits_ocr": {
+       "1": 55,
+       "5": 57,
+       "10": 57,
+       "30": 58
+      },
+      "run_n": 62,
+      "sec": 1228.2,
+      "seconds_per_photo": 19.81,
+      "ocr_errors": 0,
+      "accuracy_retrieval": 0.8226,
+      "accuracy_final": 0.8871,
+      "prf_retrieval": {
+       "@1": {
+        "hits": 51,
+        "precision": 0.8226,
+        "recall": 0.8226,
+        "f1": 0.8226
+       },
+       "@5": {
+        "hits": 53,
+        "precision": 0.171,
+        "recall": 0.8548,
+        "f1": 0.2849
+       },
+       "@10": {
+        "hits": 53,
+        "precision": 0.0855,
+        "recall": 0.8548,
+        "f1": 0.1554
+       },
+       "@30": {
+        "hits": 55,
+        "precision": 0.0296,
+        "recall": 0.8871,
+        "f1": 0.0572
+       }
+      },
+      "prf_ocr_order": {
+       "@1": {
+        "hits": 55,
+        "precision": 0.8871,
+        "recall": 0.8871,
+        "f1": 0.8871
+       },
+       "@5": {
+        "hits": 57,
+        "precision": 0.1839,
+        "recall": 0.9194,
+        "f1": 0.3065
+       },
+       "@10": {
+        "hits": 57,
+        "precision": 0.0919,
+        "recall": 0.9194,
+        "f1": 0.1672
+       },
+       "@30": {
+        "hits": 58,
+        "precision": 0.0312,
+        "recall": 0.9355,
+        "f1": 0.0604
+       }
+      }
+     },
+     "rest171": {
+      "n": 171,
+      "ret_ok": 130,
+      "fin_ok": 136,
+      "hits_ret": {
+       "1": 130,
+       "5": 152,
+       "10": 153,
+       "30": 156
+      },
+      "hits_ocr": {
+       "1": 136,
+       "5": 155,
+       "10": 156,
+       "30": 158
+      },
+      "run_n": 171,
+      "sec": 3008.0,
+      "seconds_per_photo": 17.59,
+      "ocr_errors": 0,
+      "accuracy_retrieval": 0.7602,
+      "accuracy_final": 0.7953,
+      "prf_retrieval": {
+       "@1": {
+        "hits": 130,
+        "precision": 0.7602,
+        "recall": 0.7602,
+        "f1": 0.7602
+       },
+       "@5": {
+        "hits": 152,
+        "precision": 0.1778,
+        "recall": 0.8889,
+        "f1": 0.2963
+       },
+       "@10": {
+        "hits": 153,
+        "precision": 0.0895,
+        "recall": 0.8947,
+        "f1": 0.1627
+       },
+       "@30": {
+        "hits": 156,
+        "precision": 0.0304,
+        "recall": 0.9123,
+        "f1": 0.0589
+       }
+      },
+      "prf_ocr_order": {
+       "@1": {
+        "hits": 136,
+        "precision": 0.7953,
+        "recall": 0.7953,
+        "f1": 0.7953
+       },
+       "@5": {
+        "hits": 155,
+        "precision": 0.1813,
+        "recall": 0.9064,
+        "f1": 0.3021
+       },
+       "@10": {
+        "hits": 156,
+        "precision": 0.0912,
+        "recall": 0.9123,
+        "f1": 0.1659
+       },
+       "@30": {
+        "hits": 158,
+        "precision": 0.0308,
+        "recall": 0.924,
+        "f1": 0.0596
+       }
+      }
+     },
+     "eval2": {
+      "n": 105,
+      "ret_ok": 76,
+      "fin_ok": 76,
+      "hits_ret": {
+       "1": 78,
+       "5": 96,
+       "10": 97,
+       "30": 98
+      },
+      "hits_ocr": {
+       "1": 76,
+       "5": 96,
+       "10": 97,
+       "30": 98
+      },
+      "run_n": 123,
+      "sec": 2197.1,
+      "seconds_per_photo": 17.86,
+      "ocr_errors": 0,
+      "accuracy_retrieval": 0.7238,
+      "accuracy_final": 0.7238,
+      "prf_retrieval": {
+       "@1": {
+        "hits": 78,
+        "precision": 0.7429,
+        "recall": 0.7429,
+        "f1": 0.7429
+       },
+       "@5": {
+        "hits": 96,
+        "precision": 0.1829,
+        "recall": 0.9143,
+        "f1": 0.3048
+       },
+       "@10": {
+        "hits": 97,
+        "precision": 0.0924,
+        "recall": 0.9238,
+        "f1": 0.168
+       },
+       "@30": {
+        "hits": 98,
+        "precision": 0.0311,
+        "recall": 0.9333,
+        "f1": 0.0602
+       }
+      },
+      "prf_ocr_order": {
+       "@1": {
+        "hits": 76,
+        "precision": 0.7238,
+        "recall": 0.7238,
+        "f1": 0.7238
+       },
+       "@5": {
+        "hits": 96,
+        "precision": 0.1829,
+        "recall": 0.9143,
+        "f1": 0.3048
+       },
+       "@10": {
+        "hits": 97,
+        "precision": 0.0924,
+        "recall": 0.9238,
+        "f1": 0.168
+       },
+       "@30": {
+        "hits": 98,
+        "precision": 0.0311,
+        "recall": 0.9333,
+        "f1": 0.0602
+       }
+      }
+     }
+    },
+    "groups": {
+     "233 (62+171)": {
+      "n": 233,
+      "ret_ok": 181,
+      "fin_ok": 191,
+      "hits_ret": {
+       "1": 181,
+       "5": 205,
+       "10": 206,
+       "30": 211
+      },
+      "hits_ocr": {
+       "1": 191,
+       "5": 212,
+       "10": 213,
+       "30": 216
+      },
+      "seconds_per_photo": 18.18,
+      "ocr_errors": 0,
+      "sec": 4236.2,
+      "run_n": 233,
+      "accuracy_retrieval": 0.7768,
+      "accuracy_final": 0.8197,
+      "prf_retrieval": {
+       "@1": {
+        "hits": 181,
+        "precision": 0.7768,
+        "recall": 0.7768,
+        "f1": 0.7768
+       },
+       "@5": {
+        "hits": 205,
+        "precision": 0.176,
+        "recall": 0.8798,
+        "f1": 0.2933
+       },
+       "@10": {
+        "hits": 206,
+        "precision": 0.0884,
+        "recall": 0.8841,
+        "f1": 0.1607
+       },
+       "@30": {
+        "hits": 211,
+        "precision": 0.0302,
+        "recall": 0.9056,
+        "f1": 0.0584
+       }
+      },
+      "prf_ocr_order": {
+       "@1": {
+        "hits": 191,
+        "precision": 0.8197,
+        "recall": 0.8197,
+        "f1": 0.8197
+       },
+       "@5": {
+        "hits": 212,
+        "precision": 0.182,
+        "recall": 0.9099,
+        "f1": 0.3033
+       },
+       "@10": {
+        "hits": 213,
+        "precision": 0.0914,
+        "recall": 0.9142,
+        "f1": 0.1662
+       },
+       "@30": {
+        "hits": 216,
+        "precision": 0.0309,
+        "recall": 0.927,
+        "f1": 0.0598
+       }
+      }
+     },
+     "eval2 (после прунинга)": {
+      "n": 105,
+      "ret_ok": 76,
+      "fin_ok": 76,
+      "hits_ret": {
+       "1": 78,
+       "5": 96,
+       "10": 97,
+       "30": 98
+      },
+      "hits_ocr": {
+       "1": 76,
+       "5": 96,
+       "10": 97,
+       "30": 98
+      },
+      "seconds_per_photo": 17.86,
+      "ocr_errors": 0,
+      "sec": 2197.1,
+      "run_n": 123,
+      "accuracy_retrieval": 0.7238,
+      "accuracy_final": 0.7238,
+      "prf_retrieval": {
+       "@1": {
+        "hits": 78,
+        "precision": 0.7429,
+        "recall": 0.7429,
+        "f1": 0.7429
+       },
+       "@5": {
+        "hits": 96,
+        "precision": 0.1829,
+        "recall": 0.9143,
+        "f1": 0.3048
+       },
+       "@10": {
+        "hits": 97,
+        "precision": 0.0924,
+        "recall": 0.9238,
+        "f1": 0.168
+       },
+       "@30": {
+        "hits": 98,
+        "precision": 0.0311,
+        "recall": 0.9333,
+        "f1": 0.0602
+       }
+      },
+      "prf_ocr_order": {
+       "@1": {
+        "hits": 76,
+        "precision": 0.7238,
+        "recall": 0.7238,
+        "f1": 0.7238
+       },
+       "@5": {
+        "hits": 96,
+        "precision": 0.1829,
+        "recall": 0.9143,
+        "f1": 0.3048
+       },
+       "@10": {
+        "hits": 97,
+        "precision": 0.0924,
+        "recall": 0.9238,
+        "f1": 0.168
+       },
+       "@30": {
+        "hits": 98,
+        "precision": 0.0311,
+        "recall": 0.9333,
+        "f1": 0.0602
+       }
+      }
+     },
+     "ИТОГО": {
+      "n": 338,
+      "ret_ok": 257,
+      "fin_ok": 267,
+      "hits_ret": {
+       "1": 259,
+       "5": 301,
+       "10": 303,
+       "30": 309
+      },
+      "hits_ocr": {
+       "1": 267,
+       "5": 308,
+       "10": 310,
+       "30": 314
+      },
+      "seconds_per_photo": 18.07,
+      "ocr_errors": 0,
+      "sec": 6433.299999999999,
+      "run_n": 356,
+      "accuracy_retrieval": 0.7604,
+      "accuracy_final": 0.7899,
+      "prf_retrieval": {
+       "@1": {
+        "hits": 259,
+        "precision": 0.7663,
+        "recall": 0.7663,
+        "f1": 0.7663
+       },
+       "@5": {
+        "hits": 301,
+        "precision": 0.1781,
+        "recall": 0.8905,
+        "f1": 0.2968
+       },
+       "@10": {
+        "hits": 303,
+        "precision": 0.0896,
+        "recall": 0.8964,
+        "f1": 0.163
+       },
+       "@30": {
+        "hits": 309,
+        "precision": 0.0305,
+        "recall": 0.9142,
+        "f1": 0.059
+       }
+      },
+      "prf_ocr_order": {
+       "@1": {
+        "hits": 267,
+        "precision": 0.7899,
+        "recall": 0.7899,
+        "f1": 0.7899
+       },
+       "@5": {
+        "hits": 308,
+        "precision": 0.1822,
+        "recall": 0.9112,
+        "f1": 0.3037
+       },
+       "@10": {
+        "hits": 310,
+        "precision": 0.0917,
+        "recall": 0.9172,
+        "f1": 0.1668
+       },
+       "@30": {
+        "hits": 314,
+        "precision": 0.031,
+        "recall": 0.929,
+        "f1": 0.0599
+       }
+      }
+     }
+    }
+   }
+  },
+  "gate": {
+   "positives": 341,
+   "negatives": 8,
+   "cards": 299,
+   "cards_correct": 253,
+   "negatives_accepted": 0,
+   "tp": 253,
+   "fp": 46,
+   "fn": 42,
+   "precision": 0.8462,
+   "recall": 0.8576,
+   "f1": 0.8519,
+   "agree_signals": 165,
+   "negatives_detail": [
+    {
+     "image": "1589111346142057682.jpg",
+     "top1": 0.7423,
+     "stage": "ocr_rerank",
+     "reason": "csv_decisive",
+     "csv": 0.6224,
+     "accepted": false
+    },
+    {
+     "image": "1668423139118232264.jpg",
+     "top1": 0.6793,
+     "stage": "ocr_rerank",
+     "reason": "csv_decisive",
+     "csv": 0.6714,
+     "accepted": false
+    },
+    {
+     "image": "2658847.webp",
+     "top1": 0.7637,
+     "stage": "retrieval",
+     "reason": "csv_ambiguous",
+     "csv": 0.7541,
+     "accepted": false
+    },
+    {
+     "image": "90.5_02-09-2026_10-32-11.webp",
+     "top1": 0.7285,
+     "stage": "retrieval",
+     "reason": "csv_ambiguous",
+     "csv": 0.5139,
+     "accepted": false
+    },
+    {
+     "image": "94.83_27-08-2026_14-29-28.webp",
+     "top1": 0.8085,
+     "stage": "retrieval",
+     "reason": "csv_ambiguous",
+     "csv": 0.6129,
+     "accepted": false
+    },
+    {
+     "image": "96.2_28-08-2026_19-25-29.webp",
+     "top1": 0.7945,
+     "stage": "ocr_rerank",
+     "reason": "csv_decisive",
+     "csv": 0.3729,
+     "accepted": false
+    },
+    {
+     "image": "97.08_05-09-2026_15-30-50.webp",
+     "top1": 0.7817,
+     "stage": "retrieval",
+     "reason": "csv_ambiguous",
+     "csv": 0.8615,
+     "accepted": false
+    },
+    {
+     "image": "images (1).jpeg",
+     "top1": 0.7476,
+     "stage": "retrieval",
+     "reason": "csv_ambiguous",
+     "csv": 0.386,
+     "accepted": false
+    }
+   ]
+  }
+ },
+ "google/gemini-2.5-flash": {
+  "accuracy_prf": {
+   "exact": {
+    "sets": {
+     "62": {
+      "n": 62,
+      "ret_ok": 50,
+      "fin_ok": 51,
+      "hits_ret": {
+       "1": 50,
+       "5": 53,
+       "10": 53,
+       "30": 55
+      },
+      "hits_ocr": {
+       "1": 51,
+       "5": 55,
+       "10": 55,
+       "30": 56
+      },
+      "run_n": 62,
+      "sec": 734.2,
+      "seconds_per_photo": 11.84,
+      "ocr_errors": 0,
+      "accuracy_retrieval": 0.8065,
+      "accuracy_final": 0.8226,
+      "prf_retrieval": {
+       "@1": {
+        "hits": 50,
+        "precision": 0.8065,
+        "recall": 0.8065,
+        "f1": 0.8065
+       },
+       "@5": {
+        "hits": 53,
+        "precision": 0.171,
+        "recall": 0.8548,
+        "f1": 0.2849
+       },
+       "@10": {
+        "hits": 53,
+        "precision": 0.0855,
+        "recall": 0.8548,
+        "f1": 0.1554
+       },
+       "@30": {
+        "hits": 55,
+        "precision": 0.0296,
+        "recall": 0.8871,
+        "f1": 0.0572
+       }
+      },
+      "prf_ocr_order": {
+       "@1": {
+        "hits": 51,
+        "precision": 0.8226,
+        "recall": 0.8226,
+        "f1": 0.8226
+       },
+       "@5": {
+        "hits": 55,
+        "precision": 0.1774,
+        "recall": 0.8871,
+        "f1": 0.2957
+       },
+       "@10": {
+        "hits": 55,
+        "precision": 0.0887,
+        "recall": 0.8871,
+        "f1": 0.1613
+       },
+       "@30": {
+        "hits": 56,
+        "precision": 0.0301,
+        "recall": 0.9032,
+        "f1": 0.0583
+       }
+      }
+     },
+     "rest171": {
+      "n": 171,
+      "ret_ok": 128,
+      "fin_ok": 133,
+      "hits_ret": {
+       "1": 128,
+       "5": 151,
+       "10": 152,
+       "30": 155
+      },
+      "hits_ocr": {
+       "1": 133,
+       "5": 155,
+       "10": 156,
+       "30": 157
+      },
+      "run_n": 171,
+      "sec": 1848.5,
+      "seconds_per_photo": 10.81,
+      "ocr_errors": 0,
+      "accuracy_retrieval": 0.7485,
+      "accuracy_final": 0.7778,
+      "prf_retrieval": {
+       "@1": {
+        "hits": 128,
+        "precision": 0.7485,
+        "recall": 0.7485,
+        "f1": 0.7485
+       },
+       "@5": {
+        "hits": 151,
+        "precision": 0.1766,
+        "recall": 0.883,
+        "f1": 0.2943
+       },
+       "@10": {
+        "hits": 152,
+        "precision": 0.0889,
+        "recall": 0.8889,
+        "f1": 0.1616
+       },
+       "@30": {
+        "hits": 155,
+        "precision": 0.0302,
+        "recall": 0.9064,
+        "f1": 0.0585
+       }
+      },
+      "prf_ocr_order": {
+       "@1": {
+        "hits": 133,
+        "precision": 0.7778,
+        "recall": 0.7778,
+        "f1": 0.7778
+       },
+       "@5": {
+        "hits": 155,
+        "precision": 0.1813,
+        "recall": 0.9064,
+        "f1": 0.3021
+       },
+       "@10": {
+        "hits": 156,
+        "precision": 0.0912,
+        "recall": 0.9123,
+        "f1": 0.1659
+       },
+       "@30": {
+        "hits": 157,
+        "precision": 0.0306,
+        "recall": 0.9181,
+        "f1": 0.0592
+       }
+      }
+     },
+     "eval2": {
+      "n": 105,
+      "ret_ok": 76,
+      "fin_ok": 80,
+      "hits_ret": {
+       "1": 78,
+       "5": 96,
+       "10": 97,
+       "30": 98
+      },
+      "hits_ocr": {
+       "1": 80,
+       "5": 96,
+       "10": 98,
+       "30": 99
+      },
+      "run_n": 123,
+      "sec": 1464.0,
+      "seconds_per_photo": 11.9,
+      "ocr_errors": 0,
+      "accuracy_retrieval": 0.7238,
+      "accuracy_final": 0.7619,
+      "prf_retrieval": {
+       "@1": {
+        "hits": 78,
+        "precision": 0.7429,
+        "recall": 0.7429,
+        "f1": 0.7429
+       },
+       "@5": {
+        "hits": 96,
+        "precision": 0.1829,
+        "recall": 0.9143,
+        "f1": 0.3048
+       },
+       "@10": {
+        "hits": 97,
+        "precision": 0.0924,
+        "recall": 0.9238,
+        "f1": 0.168
+       },
+       "@30": {
+        "hits": 98,
+        "precision": 0.0311,
+        "recall": 0.9333,
+        "f1": 0.0602
+       }
+      },
+      "prf_ocr_order": {
+       "@1": {
+        "hits": 80,
+        "precision": 0.7619,
+        "recall": 0.7619,
+        "f1": 0.7619
+       },
+       "@5": {
+        "hits": 96,
+        "precision": 0.1829,
+        "recall": 0.9143,
+        "f1": 0.3048
+       },
+       "@10": {
+        "hits": 98,
+        "precision": 0.0933,
+        "recall": 0.9333,
+        "f1": 0.1697
+       },
+       "@30": {
+        "hits": 99,
+        "precision": 0.0314,
+        "recall": 0.9429,
+        "f1": 0.0608
+       }
+      }
+     }
+    },
+    "groups": {
+     "233 (62+171)": {
+      "n": 233,
+      "ret_ok": 178,
+      "fin_ok": 184,
+      "hits_ret": {
+       "1": 178,
+       "5": 204,
+       "10": 205,
+       "30": 210
+      },
+      "hits_ocr": {
+       "1": 184,
+       "5": 210,
+       "10": 211,
+       "30": 213
+      },
+      "seconds_per_photo": 11.08,
+      "ocr_errors": 0,
+      "sec": 2582.7,
+      "run_n": 233,
+      "accuracy_retrieval": 0.7639,
+      "accuracy_final": 0.7897,
+      "prf_retrieval": {
+       "@1": {
+        "hits": 178,
+        "precision": 0.7639,
+        "recall": 0.7639,
+        "f1": 0.7639
+       },
+       "@5": {
+        "hits": 204,
+        "precision": 0.1751,
+        "recall": 0.8755,
+        "f1": 0.2918
+       },
+       "@10": {
+        "hits": 205,
+        "precision": 0.088,
+        "recall": 0.8798,
+        "f1": 0.16
+       },
+       "@30": {
+        "hits": 210,
+        "precision": 0.03,
+        "recall": 0.9013,
+        "f1": 0.0581
+       }
+      },
+      "prf_ocr_order": {
+       "@1": {
+        "hits": 184,
+        "precision": 0.7897,
+        "recall": 0.7897,
+        "f1": 0.7897
+       },
+       "@5": {
+        "hits": 210,
+        "precision": 0.1803,
+        "recall": 0.9013,
+        "f1": 0.3004
+       },
+       "@10": {
+        "hits": 211,
+        "precision": 0.0906,
+        "recall": 0.9056,
+        "f1": 0.1647
+       },
+       "@30": {
+        "hits": 213,
+        "precision": 0.0305,
+        "recall": 0.9142,
+        "f1": 0.059
+       }
+      }
+     },
+     "eval2 (после прунинга)": {
+      "n": 105,
+      "ret_ok": 76,
+      "fin_ok": 80,
+      "hits_ret": {
+       "1": 78,
+       "5": 96,
+       "10": 97,
+       "30": 98
+      },
+      "hits_ocr": {
+       "1": 80,
+       "5": 96,
+       "10": 98,
+       "30": 99
+      },
+      "seconds_per_photo": 11.9,
+      "ocr_errors": 0,
+      "sec": 1464.0,
+      "run_n": 123,
+      "accuracy_retrieval": 0.7238,
+      "accuracy_final": 0.7619,
+      "prf_retrieval": {
+       "@1": {
+        "hits": 78,
+        "precision": 0.7429,
+        "recall": 0.7429,
+        "f1": 0.7429
+       },
+       "@5": {
+        "hits": 96,
+        "precision": 0.1829,
+        "recall": 0.9143,
+        "f1": 0.3048
+       },
+       "@10": {
+        "hits": 97,
+        "precision": 0.0924,
+        "recall": 0.9238,
+        "f1": 0.168
+       },
+       "@30": {
+        "hits": 98,
+        "precision": 0.0311,
+        "recall": 0.9333,
+        "f1": 0.0602
+       }
+      },
+      "prf_ocr_order": {
+       "@1": {
+        "hits": 80,
+        "precision": 0.7619,
+        "recall": 0.7619,
+        "f1": 0.7619
+       },
+       "@5": {
+        "hits": 96,
+        "precision": 0.1829,
+        "recall": 0.9143,
+        "f1": 0.3048
+       },
+       "@10": {
+        "hits": 98,
+        "precision": 0.0933,
+        "recall": 0.9333,
+        "f1": 0.1697
+       },
+       "@30": {
+        "hits": 99,
+        "precision": 0.0314,
+        "recall": 0.9429,
+        "f1": 0.0608
+       }
+      }
+     },
+     "ИТОГО": {
+      "n": 338,
+      "ret_ok": 254,
+      "fin_ok": 264,
+      "hits_ret": {
+       "1": 256,
+       "5": 300,
+       "10": 302,
+       "30": 308
+      },
+      "hits_ocr": {
+       "1": 264,
+       "5": 306,
+       "10": 309,
+       "30": 312
+      },
+      "seconds_per_photo": 11.37,
+      "ocr_errors": 0,
+      "sec": 4046.7,
+      "run_n": 356,
+      "accuracy_retrieval": 0.7515,
+      "accuracy_final": 0.7811,
+      "prf_retrieval": {
+       "@1": {
+        "hits": 256,
+        "precision": 0.7574,
+        "recall": 0.7574,
+        "f1": 0.7574
+       },
+       "@5": {
+        "hits": 300,
+        "precision": 0.1775,
+        "recall": 0.8876,
+        "f1": 0.2959
+       },
+       "@10": {
+        "hits": 302,
+        "precision": 0.0893,
+        "recall": 0.8935,
+        "f1": 0.1625
+       },
+       "@30": {
+        "hits": 308,
+        "precision": 0.0304,
+        "recall": 0.9112,
+        "f1": 0.0588
+       }
+      },
+      "prf_ocr_order": {
+       "@1": {
+        "hits": 264,
+        "precision": 0.7811,
+        "recall": 0.7811,
+        "f1": 0.7811
+       },
+       "@5": {
+        "hits": 306,
+        "precision": 0.1811,
+        "recall": 0.9053,
+        "f1": 0.3018
+       },
+       "@10": {
+        "hits": 309,
+        "precision": 0.0914,
+        "recall": 0.9142,
+        "f1": 0.1662
+       },
+       "@30": {
+        "hits": 312,
+        "precision": 0.0308,
+        "recall": 0.9231,
+        "f1": 0.0596
+       }
+      }
+     }
+    }
+   },
+   "same": {
+    "sets": {
+     "62": {
+      "n": 62,
+      "ret_ok": 51,
+      "fin_ok": 52,
+      "hits_ret": {
+       "1": 51,
+       "5": 53,
+       "10": 53,
+       "30": 55
+      },
+      "hits_ocr": {
+       "1": 52,
+       "5": 55,
+       "10": 55,
+       "30": 56
+      },
+      "run_n": 62,
+      "sec": 734.2,
+      "seconds_per_photo": 11.84,
+      "ocr_errors": 0,
+      "accuracy_retrieval": 0.8226,
+      "accuracy_final": 0.8387,
+      "prf_retrieval": {
+       "@1": {
+        "hits": 51,
+        "precision": 0.8226,
+        "recall": 0.8226,
+        "f1": 0.8226
+       },
+       "@5": {
+        "hits": 53,
+        "precision": 0.171,
+        "recall": 0.8548,
+        "f1": 0.2849
+       },
+       "@10": {
+        "hits": 53,
+        "precision": 0.0855,
+        "recall": 0.8548,
+        "f1": 0.1554
+       },
+       "@30": {
+        "hits": 55,
+        "precision": 0.0296,
+        "recall": 0.8871,
+        "f1": 0.0572
+       }
+      },
+      "prf_ocr_order": {
+       "@1": {
+        "hits": 52,
+        "precision": 0.8387,
+        "recall": 0.8387,
+        "f1": 0.8387
+       },
+       "@5": {
+        "hits": 55,
+        "precision": 0.1774,
+        "recall": 0.8871,
+        "f1": 0.2957
+       },
+       "@10": {
+        "hits": 55,
+        "precision": 0.0887,
+        "recall": 0.8871,
+        "f1": 0.1613
+       },
+       "@30": {
+        "hits": 56,
+        "precision": 0.0301,
+        "recall": 0.9032,
+        "f1": 0.0583
+       }
+      }
+     },
+     "rest171": {
+      "n": 171,
+      "ret_ok": 130,
+      "fin_ok": 135,
+      "hits_ret": {
+       "1": 130,
+       "5": 152,
+       "10": 153,
+       "30": 156
+      },
+      "hits_ocr": {
+       "1": 135,
+       "5": 156,
+       "10": 157,
+       "30": 158
+      },
+      "run_n": 171,
+      "sec": 1848.5,
+      "seconds_per_photo": 10.81,
+      "ocr_errors": 0,
+      "accuracy_retrieval": 0.7602,
+      "accuracy_final": 0.7895,
+      "prf_retrieval": {
+       "@1": {
+        "hits": 130,
+        "precision": 0.7602,
+        "recall": 0.7602,
+        "f1": 0.7602
+       },
+       "@5": {
+        "hits": 152,
+        "precision": 0.1778,
+        "recall": 0.8889,
+        "f1": 0.2963
+       },
+       "@10": {
+        "hits": 153,
+        "precision": 0.0895,
+        "recall": 0.8947,
+        "f1": 0.1627
+       },
+       "@30": {
+        "hits": 156,
+        "precision": 0.0304,
+        "recall": 0.9123,
+        "f1": 0.0589
+       }
+      },
+      "prf_ocr_order": {
+       "@1": {
+        "hits": 135,
+        "precision": 0.7895,
+        "recall": 0.7895,
+        "f1": 0.7895
+       },
+       "@5": {
+        "hits": 156,
+        "precision": 0.1825,
+        "recall": 0.9123,
+        "f1": 0.3041
+       },
+       "@10": {
+        "hits": 157,
+        "precision": 0.0918,
+        "recall": 0.9181,
+        "f1": 0.1669
+       },
+       "@30": {
+        "hits": 158,
+        "precision": 0.0308,
+        "recall": 0.924,
+        "f1": 0.0596
+       }
+      }
+     },
+     "eval2": {
+      "n": 105,
+      "ret_ok": 76,
+      "fin_ok": 80,
+      "hits_ret": {
+       "1": 78,
+       "5": 96,
+       "10": 97,
+       "30": 98
+      },
+      "hits_ocr": {
+       "1": 80,
+       "5": 96,
+       "10": 98,
+       "30": 99
+      },
+      "run_n": 123,
+      "sec": 1464.0,
+      "seconds_per_photo": 11.9,
+      "ocr_errors": 0,
+      "accuracy_retrieval": 0.7238,
+      "accuracy_final": 0.7619,
+      "prf_retrieval": {
+       "@1": {
+        "hits": 78,
+        "precision": 0.7429,
+        "recall": 0.7429,
+        "f1": 0.7429
+       },
+       "@5": {
+        "hits": 96,
+        "precision": 0.1829,
+        "recall": 0.9143,
+        "f1": 0.3048
+       },
+       "@10": {
+        "hits": 97,
+        "precision": 0.0924,
+        "recall": 0.9238,
+        "f1": 0.168
+       },
+       "@30": {
+        "hits": 98,
+        "precision": 0.0311,
+        "recall": 0.9333,
+        "f1": 0.0602
+       }
+      },
+      "prf_ocr_order": {
+       "@1": {
+        "hits": 80,
+        "precision": 0.7619,
+        "recall": 0.7619,
+        "f1": 0.7619
+       },
+       "@5": {
+        "hits": 96,
+        "precision": 0.1829,
+        "recall": 0.9143,
+        "f1": 0.3048
+       },
+       "@10": {
+        "hits": 98,
+        "precision": 0.0933,
+        "recall": 0.9333,
+        "f1": 0.1697
+       },
+       "@30": {
+        "hits": 99,
+        "precision": 0.0314,
+        "recall": 0.9429,
+        "f1": 0.0608
+       }
+      }
+     }
+    },
+    "groups": {
+     "233 (62+171)": {
+      "n": 233,
+      "ret_ok": 181,
+      "fin_ok": 187,
+      "hits_ret": {
+       "1": 181,
+       "5": 205,
+       "10": 206,
+       "30": 211
+      },
+      "hits_ocr": {
+       "1": 187,
+       "5": 211,
+       "10": 212,
+       "30": 214
+      },
+      "seconds_per_photo": 11.08,
+      "ocr_errors": 0,
+      "sec": 2582.7,
+      "run_n": 233,
+      "accuracy_retrieval": 0.7768,
+      "accuracy_final": 0.8026,
+      "prf_retrieval": {
+       "@1": {
+        "hits": 181,
+        "precision": 0.7768,
+        "recall": 0.7768,
+        "f1": 0.7768
+       },
+       "@5": {
+        "hits": 205,
+        "precision": 0.176,
+        "recall": 0.8798,
+        "f1": 0.2933
+       },
+       "@10": {
+        "hits": 206,
+        "precision": 0.0884,
+        "recall": 0.8841,
+        "f1": 0.1607
+       },
+       "@30": {
+        "hits": 211,
+        "precision": 0.0302,
+        "recall": 0.9056,
+        "f1": 0.0584
+       }
+      },
+      "prf_ocr_order": {
+       "@1": {
+        "hits": 187,
+        "precision": 0.8026,
+        "recall": 0.8026,
+        "f1": 0.8026
+       },
+       "@5": {
+        "hits": 211,
+        "precision": 0.1811,
+        "recall": 0.9056,
+        "f1": 0.3019
+       },
+       "@10": {
+        "hits": 212,
+        "precision": 0.091,
+        "recall": 0.9099,
+        "f1": 0.1654
+       },
+       "@30": {
+        "hits": 214,
+        "precision": 0.0306,
+        "recall": 0.9185,
+        "f1": 0.0593
+       }
+      }
+     },
+     "eval2 (после прунинга)": {
+      "n": 105,
+      "ret_ok": 76,
+      "fin_ok": 80,
+      "hits_ret": {
+       "1": 78,
+       "5": 96,
+       "10": 97,
+       "30": 98
+      },
+      "hits_ocr": {
+       "1": 80,
+       "5": 96,
+       "10": 98,
+       "30": 99
+      },
+      "seconds_per_photo": 11.9,
+      "ocr_errors": 0,
+      "sec": 1464.0,
+      "run_n": 123,
+      "accuracy_retrieval": 0.7238,
+      "accuracy_final": 0.7619,
+      "prf_retrieval": {
+       "@1": {
+        "hits": 78,
+        "precision": 0.7429,
+        "recall": 0.7429,
+        "f1": 0.7429
+       },
+       "@5": {
+        "hits": 96,
+        "precision": 0.1829,
+        "recall": 0.9143,
+        "f1": 0.3048
+       },
+       "@10": {
+        "hits": 97,
+        "precision": 0.0924,
+        "recall": 0.9238,
+        "f1": 0.168
+       },
+       "@30": {
+        "hits": 98,
+        "precision": 0.0311,
+        "recall": 0.9333,
+        "f1": 0.0602
+       }
+      },
+      "prf_ocr_order": {
+       "@1": {
+        "hits": 80,
+        "precision": 0.7619,
+        "recall": 0.7619,
+        "f1": 0.7619
+       },
+       "@5": {
+        "hits": 96,
+        "precision": 0.1829,
+        "recall": 0.9143,
+        "f1": 0.3048
+       },
+       "@10": {
+        "hits": 98,
+        "precision": 0.0933,
+        "recall": 0.9333,
+        "f1": 0.1697
+       },
+       "@30": {
+        "hits": 99,
+        "precision": 0.0314,
+        "recall": 0.9429,
+        "f1": 0.0608
+       }
+      }
+     },
+     "ИТОГО": {
+      "n": 338,
+      "ret_ok": 257,
+      "fin_ok": 267,
+      "hits_ret": {
+       "1": 259,
+       "5": 301,
+       "10": 303,
+       "30": 309
+      },
+      "hits_ocr": {
+       "1": 267,
+       "5": 307,
+       "10": 310,
+       "30": 313
+      },
+      "seconds_per_photo": 11.37,
+      "ocr_errors": 0,
+      "sec": 4046.7,
+      "run_n": 356,
+      "accuracy_retrieval": 0.7604,
+      "accuracy_final": 0.7899,
+      "prf_retrieval": {
+       "@1": {
+        "hits": 259,
+        "precision": 0.7663,
+        "recall": 0.7663,
+        "f1": 0.7663
+       },
+       "@5": {
+        "hits": 301,
+        "precision": 0.1781,
+        "recall": 0.8905,
+        "f1": 0.2968
+       },
+       "@10": {
+        "hits": 303,
+        "precision": 0.0896,
+        "recall": 0.8964,
+        "f1": 0.163
+       },
+       "@30": {
+        "hits": 309,
+        "precision": 0.0305,
+        "recall": 0.9142,
+        "f1": 0.059
+       }
+      },
+      "prf_ocr_order": {
+       "@1": {
+        "hits": 267,
+        "precision": 0.7899,
+        "recall": 0.7899,
+        "f1": 0.7899
+       },
+       "@5": {
+        "hits": 307,
+        "precision": 0.1817,
+        "recall": 0.9083,
+        "f1": 0.3028
+       },
+       "@10": {
+        "hits": 310,
+        "precision": 0.0917,
+        "recall": 0.9172,
+        "f1": 0.1668
+       },
+       "@30": {
+        "hits": 313,
+        "precision": 0.0309,
+        "recall": 0.926,
+        "f1": 0.0597
+       }
+      }
+     }
+    }
+   }
+  },
+  "gate": {
+   "positives": 341,
+   "negatives": 8,
+   "cards": 303,
+   "cards_correct": 256,
+   "negatives_accepted": 1,
+   "tp": 256,
+   "fp": 48,
+   "fn": 38,
+   "precision": 0.8421,
+   "recall": 0.8707,
+   "f1": 0.8562,
+   "agree_signals": 185,
+   "negatives_detail": [
+    {
+     "image": "1589111346142057682.jpg",
+     "top1": 0.7423,
+     "stage": "ocr_rerank",
+     "reason": "csv_decisive",
+     "csv": 0.8026,
+     "accepted": true
+    },
+    {
+     "image": "1668423139118232264.jpg",
+     "top1": 0.6793,
+     "stage": "retrieval",
+     "reason": "csv_ambiguous",
+     "csv": 0.6,
+     "accepted": false
+    },
+    {
+     "image": "2658847.webp",
+     "top1": 0.7637,
+     "stage": "retrieval",
+     "reason": "csv_ambiguous",
+     "csv": 1.0,
+     "accepted": false
+    },
+    {
+     "image": "90.5_02-09-2026_10-32-11.webp",
+     "top1": 0.7285,
+     "stage": "retrieval",
+     "reason": "csv_ambiguous",
+     "csv": 0.5254,
+     "accepted": false
+    },
+    {
+     "image": "94.83_27-08-2026_14-29-28.webp",
+     "top1": 0.8085,
+     "stage": "retrieval",
+     "reason": "csv_ambiguous",
+     "csv": 0.5121,
+     "accepted": false
+    },
+    {
+     "image": "96.2_28-08-2026_19-25-29.webp",
+     "top1": 0.7945,
+     "stage": "ocr_rerank",
+     "reason": "csv_decisive",
+     "csv": 0.3729,
+     "accepted": false
+    },
+    {
+     "image": "97.08_05-09-2026_15-30-50.webp",
+     "top1": 0.7817,
+     "stage": "retrieval",
+     "reason": "csv_ambiguous",
+     "csv": 0.8615,
+     "accepted": false
+    },
+    {
+     "image": "images (1).jpeg",
+     "top1": 0.7476,
+     "stage": "retrieval",
+     "reason": "csv_ambiguous",
+     "csv": 0.386,
+     "accepted": false
+    }
+   ]
+  }
+ },
+ "google/gemini-2.5-flash-lite": {
+  "accuracy_prf": {
+   "exact": {
+    "sets": {
+     "62": {
+      "n": 62,
+      "ret_ok": 50,
+      "fin_ok": 53,
+      "hits_ret": {
+       "1": 50,
+       "5": 53,
+       "10": 53,
+       "30": 55
+      },
+      "hits_ocr": {
+       "1": 53,
+       "5": 57,
+       "10": 57,
+       "30": 58
+      },
+      "run_n": 62,
+      "sec": 819.5,
+      "seconds_per_photo": 13.22,
+      "ocr_errors": 0,
+      "accuracy_retrieval": 0.8065,
+      "accuracy_final": 0.8548,
+      "prf_retrieval": {
+       "@1": {
+        "hits": 50,
+        "precision": 0.8065,
+        "recall": 0.8065,
+        "f1": 0.8065
+       },
+       "@5": {
+        "hits": 53,
+        "precision": 0.171,
+        "recall": 0.8548,
+        "f1": 0.2849
+       },
+       "@10": {
+        "hits": 53,
+        "precision": 0.0855,
+        "recall": 0.8548,
+        "f1": 0.1554
+       },
+       "@30": {
+        "hits": 55,
+        "precision": 0.0296,
+        "recall": 0.8871,
+        "f1": 0.0572
+       }
+      },
+      "prf_ocr_order": {
+       "@1": {
+        "hits": 53,
+        "precision": 0.8548,
+        "recall": 0.8548,
+        "f1": 0.8548
+       },
+       "@5": {
+        "hits": 57,
+        "precision": 0.1839,
+        "recall": 0.9194,
+        "f1": 0.3065
+       },
+       "@10": {
+        "hits": 57,
+        "precision": 0.0919,
+        "recall": 0.9194,
+        "f1": 0.1672
+       },
+       "@30": {
+        "hits": 58,
+        "precision": 0.0312,
+        "recall": 0.9355,
+        "f1": 0.0604
+       }
+      }
+     },
+     "rest171": {
+      "n": 171,
+      "ret_ok": 128,
+      "fin_ok": 126,
+      "hits_ret": {
+       "1": 128,
+       "5": 151,
+       "10": 152,
+       "30": 155
+      },
+      "hits_ocr": {
+       "1": 126,
+       "5": 152,
+       "10": 153,
+       "30": 156
+      },
+      "run_n": 171,
+      "sec": 1929.0,
+      "seconds_per_photo": 11.28,
+      "ocr_errors": 0,
+      "accuracy_retrieval": 0.7485,
+      "accuracy_final": 0.7368,
+      "prf_retrieval": {
+       "@1": {
+        "hits": 128,
+        "precision": 0.7485,
+        "recall": 0.7485,
+        "f1": 0.7485
+       },
+       "@5": {
+        "hits": 151,
+        "precision": 0.1766,
+        "recall": 0.883,
+        "f1": 0.2943
+       },
+       "@10": {
+        "hits": 152,
+        "precision": 0.0889,
+        "recall": 0.8889,
+        "f1": 0.1616
+       },
+       "@30": {
+        "hits": 155,
+        "precision": 0.0302,
+        "recall": 0.9064,
+        "f1": 0.0585
+       }
+      },
+      "prf_ocr_order": {
+       "@1": {
+        "hits": 126,
+        "precision": 0.7368,
+        "recall": 0.7368,
+        "f1": 0.7368
+       },
+       "@5": {
+        "hits": 152,
+        "precision": 0.1778,
+        "recall": 0.8889,
+        "f1": 0.2963
+       },
+       "@10": {
+        "hits": 153,
+        "precision": 0.0895,
+        "recall": 0.8947,
+        "f1": 0.1627
+       },
+       "@30": {
+        "hits": 156,
+        "precision": 0.0304,
+        "recall": 0.9123,
+        "f1": 0.0589
+       }
+      }
+     },
+     "eval2": {
+      "n": 105,
+      "ret_ok": 76,
+      "fin_ok": 77,
+      "hits_ret": {
+       "1": 78,
+       "5": 96,
+       "10": 97,
+       "30": 98
+      },
+      "hits_ocr": {
+       "1": 77,
+       "5": 97,
+       "10": 98,
+       "30": 99
+      },
+      "run_n": 123,
+      "sec": 1441.1,
+      "seconds_per_photo": 11.72,
+      "ocr_errors": 0,
+      "accuracy_retrieval": 0.7238,
+      "accuracy_final": 0.7333,
+      "prf_retrieval": {
+       "@1": {
+        "hits": 78,
+        "precision": 0.7429,
+        "recall": 0.7429,
+        "f1": 0.7429
+       },
+       "@5": {
+        "hits": 96,
+        "precision": 0.1829,
+        "recall": 0.9143,
+        "f1": 0.3048
+       },
+       "@10": {
+        "hits": 97,
+        "precision": 0.0924,
+        "recall": 0.9238,
+        "f1": 0.168
+       },
+       "@30": {
+        "hits": 98,
+        "precision": 0.0311,
+        "recall": 0.9333,
+        "f1": 0.0602
+       }
+      },
+      "prf_ocr_order": {
+       "@1": {
+        "hits": 77,
+        "precision": 0.7333,
+        "recall": 0.7333,
+        "f1": 0.7333
+       },
+       "@5": {
+        "hits": 97,
+        "precision": 0.1848,
+        "recall": 0.9238,
+        "f1": 0.3079
+       },
+       "@10": {
+        "hits": 98,
+        "precision": 0.0933,
+        "recall": 0.9333,
+        "f1": 0.1697
+       },
+       "@30": {
+        "hits": 99,
+        "precision": 0.0314,
+        "recall": 0.9429,
+        "f1": 0.0608
+       }
+      }
+     }
+    },
+    "groups": {
+     "233 (62+171)": {
+      "n": 233,
+      "ret_ok": 178,
+      "fin_ok": 179,
+      "hits_ret": {
+       "1": 178,
+       "5": 204,
+       "10": 205,
+       "30": 210
+      },
+      "hits_ocr": {
+       "1": 179,
+       "5": 209,
+       "10": 210,
+       "30": 214
+      },
+      "seconds_per_photo": 11.8,
+      "ocr_errors": 0,
+      "sec": 2748.5,
+      "run_n": 233,
+      "accuracy_retrieval": 0.7639,
+      "accuracy_final": 0.7682,
+      "prf_retrieval": {
+       "@1": {
+        "hits": 178,
+        "precision": 0.7639,
+        "recall": 0.7639,
+        "f1": 0.7639
+       },
+       "@5": {
+        "hits": 204,
+        "precision": 0.1751,
+        "recall": 0.8755,
+        "f1": 0.2918
+       },
+       "@10": {
+        "hits": 205,
+        "precision": 0.088,
+        "recall": 0.8798,
+        "f1": 0.16
+       },
+       "@30": {
+        "hits": 210,
+        "precision": 0.03,
+        "recall": 0.9013,
+        "f1": 0.0581
+       }
+      },
+      "prf_ocr_order": {
+       "@1": {
+        "hits": 179,
+        "precision": 0.7682,
+        "recall": 0.7682,
+        "f1": 0.7682
+       },
+       "@5": {
+        "hits": 209,
+        "precision": 0.1794,
+        "recall": 0.897,
+        "f1": 0.299
+       },
+       "@10": {
+        "hits": 210,
+        "precision": 0.0901,
+        "recall": 0.9013,
+        "f1": 0.1639
+       },
+       "@30": {
+        "hits": 214,
+        "precision": 0.0306,
+        "recall": 0.9185,
+        "f1": 0.0593
+       }
+      }
+     },
+     "eval2 (после прунинга)": {
+      "n": 105,
+      "ret_ok": 76,
+      "fin_ok": 77,
+      "hits_ret": {
+       "1": 78,
+       "5": 96,
+       "10": 97,
+       "30": 98
+      },
+      "hits_ocr": {
+       "1": 77,
+       "5": 97,
+       "10": 98,
+       "30": 99
+      },
+      "seconds_per_photo": 11.72,
+      "ocr_errors": 0,
+      "sec": 1441.1,
+      "run_n": 123,
+      "accuracy_retrieval": 0.7238,
+      "accuracy_final": 0.7333,
+      "prf_retrieval": {
+       "@1": {
+        "hits": 78,
+        "precision": 0.7429,
+        "recall": 0.7429,
+        "f1": 0.7429
+       },
+       "@5": {
+        "hits": 96,
+        "precision": 0.1829,
+        "recall": 0.9143,
+        "f1": 0.3048
+       },
+       "@10": {
+        "hits": 97,
+        "precision": 0.0924,
+        "recall": 0.9238,
+        "f1": 0.168
+       },
+       "@30": {
+        "hits": 98,
+        "precision": 0.0311,
+        "recall": 0.9333,
+        "f1": 0.0602
+       }
+      },
+      "prf_ocr_order": {
+       "@1": {
+        "hits": 77,
+        "precision": 0.7333,
+        "recall": 0.7333,
+        "f1": 0.7333
+       },
+       "@5": {
+        "hits": 97,
+        "precision": 0.1848,
+        "recall": 0.9238,
+        "f1": 0.3079
+       },
+       "@10": {
+        "hits": 98,
+        "precision": 0.0933,
+        "recall": 0.9333,
+        "f1": 0.1697
+       },
+       "@30": {
+        "hits": 99,
+        "precision": 0.0314,
+        "recall": 0.9429,
+        "f1": 0.0608
+       }
+      }
+     },
+     "ИТОГО": {
+      "n": 338,
+      "ret_ok": 254,
+      "fin_ok": 256,
+      "hits_ret": {
+       "1": 256,
+       "5": 300,
+       "10": 302,
+       "30": 308
+      },
+      "hits_ocr": {
+       "1": 256,
+       "5": 306,
+       "10": 308,
+       "30": 313
+      },
+      "seconds_per_photo": 11.77,
+      "ocr_errors": 0,
+      "sec": 4189.6,
+      "run_n": 356,
+      "accuracy_retrieval": 0.7515,
+      "accuracy_final": 0.7574,
+      "prf_retrieval": {
+       "@1": {
+        "hits": 256,
+        "precision": 0.7574,
+        "recall": 0.7574,
+        "f1": 0.7574
+       },
+       "@5": {
+        "hits": 300,
+        "precision": 0.1775,
+        "recall": 0.8876,
+        "f1": 0.2959
+       },
+       "@10": {
+        "hits": 302,
+        "precision": 0.0893,
+        "recall": 0.8935,
+        "f1": 0.1625
+       },
+       "@30": {
+        "hits": 308,
+        "precision": 0.0304,
+        "recall": 0.9112,
+        "f1": 0.0588
+       }
+      },
+      "prf_ocr_order": {
+       "@1": {
+        "hits": 256,
+        "precision": 0.7574,
+        "recall": 0.7574,
+        "f1": 0.7574
+       },
+       "@5": {
+        "hits": 306,
+        "precision": 0.1811,
+        "recall": 0.9053,
+        "f1": 0.3018
+       },
+       "@10": {
+        "hits": 308,
+        "precision": 0.0911,
+        "recall": 0.9112,
+        "f1": 0.1657
+       },
+       "@30": {
+        "hits": 313,
+        "precision": 0.0309,
+        "recall": 0.926,
+        "f1": 0.0597
+       }
+      }
+     }
+    }
+   },
+   "same": {
+    "sets": {
+     "62": {
+      "n": 62,
+      "ret_ok": 51,
+      "fin_ok": 54,
+      "hits_ret": {
+       "1": 51,
+       "5": 53,
+       "10": 53,
+       "30": 55
+      },
+      "hits_ocr": {
+       "1": 54,
+       "5": 57,
+       "10": 57,
+       "30": 58
+      },
+      "run_n": 62,
+      "sec": 819.5,
+      "seconds_per_photo": 13.22,
+      "ocr_errors": 0,
+      "accuracy_retrieval": 0.8226,
+      "accuracy_final": 0.871,
+      "prf_retrieval": {
+       "@1": {
+        "hits": 51,
+        "precision": 0.8226,
+        "recall": 0.8226,
+        "f1": 0.8226
+       },
+       "@5": {
+        "hits": 53,
+        "precision": 0.171,
+        "recall": 0.8548,
+        "f1": 0.2849
+       },
+       "@10": {
+        "hits": 53,
+        "precision": 0.0855,
+        "recall": 0.8548,
+        "f1": 0.1554
+       },
+       "@30": {
+        "hits": 55,
+        "precision": 0.0296,
+        "recall": 0.8871,
+        "f1": 0.0572
+       }
+      },
+      "prf_ocr_order": {
+       "@1": {
+        "hits": 54,
+        "precision": 0.871,
+        "recall": 0.871,
+        "f1": 0.871
+       },
+       "@5": {
+        "hits": 57,
+        "precision": 0.1839,
+        "recall": 0.9194,
+        "f1": 0.3065
+       },
+       "@10": {
+        "hits": 57,
+        "precision": 0.0919,
+        "recall": 0.9194,
+        "f1": 0.1672
+       },
+       "@30": {
+        "hits": 58,
+        "precision": 0.0312,
+        "recall": 0.9355,
+        "f1": 0.0604
+       }
+      }
+     },
+     "rest171": {
+      "n": 171,
+      "ret_ok": 130,
+      "fin_ok": 128,
+      "hits_ret": {
+       "1": 130,
+       "5": 152,
+       "10": 153,
+       "30": 156
+      },
+      "hits_ocr": {
+       "1": 128,
+       "5": 153,
+       "10": 154,
+       "30": 157
+      },
+      "run_n": 171,
+      "sec": 1929.0,
+      "seconds_per_photo": 11.28,
+      "ocr_errors": 0,
+      "accuracy_retrieval": 0.7602,
+      "accuracy_final": 0.7485,
+      "prf_retrieval": {
+       "@1": {
+        "hits": 130,
+        "precision": 0.7602,
+        "recall": 0.7602,
+        "f1": 0.7602
+       },
+       "@5": {
+        "hits": 152,
+        "precision": 0.1778,
+        "recall": 0.8889,
+        "f1": 0.2963
+       },
+       "@10": {
+        "hits": 153,
+        "precision": 0.0895,
+        "recall": 0.8947,
+        "f1": 0.1627
+       },
+       "@30": {
+        "hits": 156,
+        "precision": 0.0304,
+        "recall": 0.9123,
+        "f1": 0.0589
+       }
+      },
+      "prf_ocr_order": {
+       "@1": {
+        "hits": 128,
+        "precision": 0.7485,
+        "recall": 0.7485,
+        "f1": 0.7485
+       },
+       "@5": {
+        "hits": 153,
+        "precision": 0.1789,
+        "recall": 0.8947,
+        "f1": 0.2982
+       },
+       "@10": {
+        "hits": 154,
+        "precision": 0.0901,
+        "recall": 0.9006,
+        "f1": 0.1637
+       },
+       "@30": {
+        "hits": 157,
+        "precision": 0.0306,
+        "recall": 0.9181,
+        "f1": 0.0592
+       }
+      }
+     },
+     "eval2": {
+      "n": 105,
+      "ret_ok": 76,
+      "fin_ok": 77,
+      "hits_ret": {
+       "1": 78,
+       "5": 96,
+       "10": 97,
+       "30": 98
+      },
+      "hits_ocr": {
+       "1": 77,
+       "5": 97,
+       "10": 98,
+       "30": 99
+      },
+      "run_n": 123,
+      "sec": 1441.1,
+      "seconds_per_photo": 11.72,
+      "ocr_errors": 0,
+      "accuracy_retrieval": 0.7238,
+      "accuracy_final": 0.7333,
+      "prf_retrieval": {
+       "@1": {
+        "hits": 78,
+        "precision": 0.7429,
+        "recall": 0.7429,
+        "f1": 0.7429
+       },
+       "@5": {
+        "hits": 96,
+        "precision": 0.1829,
+        "recall": 0.9143,
+        "f1": 0.3048
+       },
+       "@10": {
+        "hits": 97,
+        "precision": 0.0924,
+        "recall": 0.9238,
+        "f1": 0.168
+       },
+       "@30": {
+        "hits": 98,
+        "precision": 0.0311,
+        "recall": 0.9333,
+        "f1": 0.0602
+       }
+      },
+      "prf_ocr_order": {
+       "@1": {
+        "hits": 77,
+        "precision": 0.7333,
+        "recall": 0.7333,
+        "f1": 0.7333
+       },
+       "@5": {
+        "hits": 97,
+        "precision": 0.1848,
+        "recall": 0.9238,
+        "f1": 0.3079
+       },
+       "@10": {
+        "hits": 98,
+        "precision": 0.0933,
+        "recall": 0.9333,
+        "f1": 0.1697
+       },
+       "@30": {
+        "hits": 99,
+        "precision": 0.0314,
+        "recall": 0.9429,
+        "f1": 0.0608
+       }
+      }
+     }
+    },
+    "groups": {
+     "233 (62+171)": {
+      "n": 233,
+      "ret_ok": 181,
+      "fin_ok": 182,
+      "hits_ret": {
+       "1": 181,
+       "5": 205,
+       "10": 206,
+       "30": 211
+      },
+      "hits_ocr": {
+       "1": 182,
+       "5": 210,
+       "10": 211,
+       "30": 215
+      },
+      "seconds_per_photo": 11.8,
+      "ocr_errors": 0,
+      "sec": 2748.5,
+      "run_n": 233,
+      "accuracy_retrieval": 0.7768,
+      "accuracy_final": 0.7811,
+      "prf_retrieval": {
+       "@1": {
+        "hits": 181,
+        "precision": 0.7768,
+        "recall": 0.7768,
+        "f1": 0.7768
+       },
+       "@5": {
+        "hits": 205,
+        "precision": 0.176,
+        "recall": 0.8798,
+        "f1": 0.2933
+       },
+       "@10": {
+        "hits": 206,
+        "precision": 0.0884,
+        "recall": 0.8841,
+        "f1": 0.1607
+       },
+       "@30": {
+        "hits": 211,
+        "precision": 0.0302,
+        "recall": 0.9056,
+        "f1": 0.0584
+       }
+      },
+      "prf_ocr_order": {
+       "@1": {
+        "hits": 182,
+        "precision": 0.7811,
+        "recall": 0.7811,
+        "f1": 0.7811
+       },
+       "@5": {
+        "hits": 210,
+        "precision": 0.1803,
+        "recall": 0.9013,
+        "f1": 0.3004
+       },
+       "@10": {
+        "hits": 211,
+        "precision": 0.0906,
+        "recall": 0.9056,
+        "f1": 0.1647
+       },
+       "@30": {
+        "hits": 215,
+        "precision": 0.0308,
+        "recall": 0.9227,
+        "f1": 0.0595
+       }
+      }
+     },
+     "eval2 (после прунинга)": {
+      "n": 105,
+      "ret_ok": 76,
+      "fin_ok": 77,
+      "hits_ret": {
+       "1": 78,
+       "5": 96,
+       "10": 97,
+       "30": 98
+      },
+      "hits_ocr": {
+       "1": 77,
+       "5": 97,
+       "10": 98,
+       "30": 99
+      },
+      "seconds_per_photo": 11.72,
+      "ocr_errors": 0,
+      "sec": 1441.1,
+      "run_n": 123,
+      "accuracy_retrieval": 0.7238,
+      "accuracy_final": 0.7333,
+      "prf_retrieval": {
+       "@1": {
+        "hits": 78,
+        "precision": 0.7429,
+        "recall": 0.7429,
+        "f1": 0.7429
+       },
+       "@5": {
+        "hits": 96,
+        "precision": 0.1829,
+        "recall": 0.9143,
+        "f1": 0.3048
+       },
+       "@10": {
+        "hits": 97,
+        "precision": 0.0924,
+        "recall": 0.9238,
+        "f1": 0.168
+       },
+       "@30": {
+        "hits": 98,
+        "precision": 0.0311,
+        "recall": 0.9333,
+        "f1": 0.0602
+       }
+      },
+      "prf_ocr_order": {
+       "@1": {
+        "hits": 77,
+        "precision": 0.7333,
+        "recall": 0.7333,
+        "f1": 0.7333
+       },
+       "@5": {
+        "hits": 97,
+        "precision": 0.1848,
+        "recall": 0.9238,
+        "f1": 0.3079
+       },
+       "@10": {
+        "hits": 98,
+        "precision": 0.0933,
+        "recall": 0.9333,
+        "f1": 0.1697
+       },
+       "@30": {
+        "hits": 99,
+        "precision": 0.0314,
+        "recall": 0.9429,
+        "f1": 0.0608
+       }
+      }
+     },
+     "ИТОГО": {
+      "n": 338,
+      "ret_ok": 257,
+      "fin_ok": 259,
+      "hits_ret": {
+       "1": 259,
+       "5": 301,
+       "10": 303,
+       "30": 309
+      },
+      "hits_ocr": {
+       "1": 259,
+       "5": 307,
+       "10": 309,
+       "30": 314
+      },
+      "seconds_per_photo": 11.77,
+      "ocr_errors": 0,
+      "sec": 4189.6,
+      "run_n": 356,
+      "accuracy_retrieval": 0.7604,
+      "accuracy_final": 0.7663,
+      "prf_retrieval": {
+       "@1": {
+        "hits": 259,
+        "precision": 0.7663,
+        "recall": 0.7663,
+        "f1": 0.7663
+       },
+       "@5": {
+        "hits": 301,
+        "precision": 0.1781,
+        "recall": 0.8905,
+        "f1": 0.2968
+       },
+       "@10": {
+        "hits": 303,
+        "precision": 0.0896,
+        "recall": 0.8964,
+        "f1": 0.163
+       },
+       "@30": {
+        "hits": 309,
+        "precision": 0.0305,
+        "recall": 0.9142,
+        "f1": 0.059
+       }
+      },
+      "prf_ocr_order": {
+       "@1": {
+        "hits": 259,
+        "precision": 0.7663,
+        "recall": 0.7663,
+        "f1": 0.7663
+       },
+       "@5": {
+        "hits": 307,
+        "precision": 0.1817,
+        "recall": 0.9083,
+        "f1": 0.3028
+       },
+       "@10": {
+        "hits": 309,
+        "precision": 0.0914,
+        "recall": 0.9142,
+        "f1": 0.1662
+       },
+       "@30": {
+        "hits": 314,
+        "precision": 0.031,
+        "recall": 0.929,
+        "f1": 0.0599
+       }
+      }
+     }
+    }
+   }
+  },
+  "gate": {
+   "positives": 341,
+   "negatives": 8,
+   "cards": 297,
+   "cards_correct": 242,
+   "negatives_accepted": 1,
+   "tp": 242,
+   "fp": 56,
+   "fn": 44,
+   "precision": 0.8121,
+   "recall": 0.8462,
+   "f1": 0.8288,
+   "agree_signals": 146,
+   "negatives_detail": [
+    {
+     "image": "1589111346142057682.jpg",
+     "top1": 0.7423,
+     "stage": "ocr_rerank",
+     "reason": "csv_decisive",
+     "csv": 0.7541,
+     "accepted": false
+    },
+    {
+     "image": "1668423139118232264.jpg",
+     "top1": 0.6793,
+     "stage": "retrieval",
+     "reason": "csv_ambiguous",
+     "csv": 0.4562,
+     "accepted": false
+    },
+    {
+     "image": "2658847.webp",
+     "top1": 0.7637,
+     "stage": "ocr_rerank",
+     "reason": "csv_decisive",
+     "csv": 0.973,
+     "accepted": true
+    },
+    {
+     "image": "90.5_02-09-2026_10-32-11.webp",
+     "top1": 0.7285,
+     "stage": "retrieval",
+     "reason": "csv_ambiguous",
+     "csv": 0.5254,
+     "accepted": false
+    },
+    {
+     "image": "94.83_27-08-2026_14-29-28.webp",
+     "top1": 0.8085,
+     "stage": "retrieval",
+     "reason": "csv_ambiguous",
+     "csv": 0.7853,
+     "accepted": false
+    },
+    {
+     "image": "96.2_28-08-2026_19-25-29.webp",
+     "top1": 0.7945,
+     "stage": "retrieval",
+     "reason": "csv_ambiguous",
+     "csv": 0.5,
+     "accepted": false
+    },
+    {
+     "image": "97.08_05-09-2026_15-30-50.webp",
+     "top1": 0.7817,
+     "stage": "retrieval",
+     "reason": "csv_ambiguous",
+     "csv": 0.8896,
+     "accepted": false
+    },
+    {
+     "image": "images (1).jpeg",
+     "top1": 0.7476,
+     "stage": "retrieval",
+     "reason": "csv_ambiguous",
+     "csv": 0.7115,
+     "accepted": false
+    }
+   ]
+  }
+ }
+}

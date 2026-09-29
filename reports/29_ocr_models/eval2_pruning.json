@@ -1,0 +1,37 @@
+{
+ "removed_wines": [
+  "abrau-dyurso-abrau-estates-krasnoe-kaberne-sovinon-suhoe-13",
+  "abrau-dyurso-victor-dravigny-brut-rose-pino-nuar-rozovoe-bryut-12",
+  "abrau-dyurso-victor-dravigny-bryut",
+  "abrau-dyurso-abrau-estates-dostoynyy-krasnoe-suhoe-135",
+  "abrau-dyurso-russkoe-igristoe-polusladkoe-krasnoe-kaberne-sovinon-12",
+  "abrau-dyurso-abrau-durso-reserve-brut-shardone-beloe-bryut-115",
+  "abrau-dyurso-abrau-dyurso-pino-nuar-krasnoe-suhoe-13",
+  "abrau-dyurso-abrau-estates-beloe-shardone-suhoe-12",
+  "abrau-dyurso-brut-dor-blanc-de-blancs-shardone-beloe-bryut-12",
+  "abrau-dyurso-brut-dor-blanc-de-noirs-pino-nuar-beloe-bryut-115"
+ ],
+ "removed_photos": [
+  "abrau-dyurso-abrau-estates-krasnoe-kaberne-sovinon-suhoe-13__01__B09CC266-031C-49E2-A625-C6FBB95A79F0_4_5005_c.jpeg",
+  "abrau-dyurso-abrau-estates-krasnoe-kaberne-sovinon-suhoe-13__02__CC61C362-5E47-4866-88CE-F13EDAD58720_4_5005_c.jpeg",
+  "abrau-dyurso-abrau-estates-krasnoe-kaberne-sovinon-suhoe-13__03__DCA0DA2E-215A-462C-8538-8EDB4C44593F_4_5005_c.jpeg",
+  "abrau-dyurso-victor-dravigny-brut-rose-pino-nuar-rozovoe-bryut-12__01__61642C98-6EA2-4E18-B4CA-0CC8D140C5E8_4_5005_c.jpeg",
+  "abrau-dyurso-victor-dravigny-brut-rose-pino-nuar-rozovoe-bryut-12__02__69853F39-4A1E-44F6-AA5D-F5418684BF6F_4_5005_c.jpeg",
+  "abrau-dyurso-victor-dravigny-brut-rose-pino-nuar-rozovoe-bryut-12__03__C619D022-FC09-404C-82B8-058E7B1DC270_4_5005_c.jpeg",
+  "abrau-dyurso-victor-dravigny-bryut__01__2A315C7E-BF1A-41BE-B1FC-6AA1CDB000D3_4_5005_c.jpeg",
+  "abrau-dyurso-victor-dravigny-bryut__02__abrau-dyurso-brut-dor-blanc-de-noirs-pino-nuar-beloe-bryut-115__img_005_f4e8b98ce5.jpg",
+  "abrau-dyurso-victor-dravigny-bryut__03__abrau-dyurso-brut-dor-riesling-risling-beloe-bryut-12__img_005_f4e8b98ce5.jpg",
+  "abrau-dyurso-abrau-estates-dostoynyy-krasnoe-suhoe-135__01__15771442-1072-49B7-8CBF-DB54A5E8D1DC_4_5005_c.jpeg",
+  "abrau-dyurso-abrau-estates-dostoynyy-krasnoe-suhoe-135__02__F0DF88D6-54E5-4B50-AD40-A64E151A8F31_4_5005_c.jpeg",
+  "abrau-dyurso-russkoe-igristoe-polusladkoe-krasnoe-kaberne-sovinon-12__01__2C4448EB-9228-4020-9419-87A71543C299_4_5005_c.jpeg",
+  "abrau-dyurso-russkoe-igristoe-polusladkoe-krasnoe-kaberne-sovinon-12__02__306D2787-68B2-4956-A7A1-2D20186B10D7_4_5005_c.jpeg",
+  "abrau-dyurso-abrau-durso-reserve-brut-shardone-beloe-bryut-115__01__abrau-dyurso-brut-dor-riesling-risling-beloe-bryut-12__img_010_72f59f3141.jpg",
+  "abrau-dyurso-abrau-dyurso-pino-nuar-krasnoe-suhoe-13__01__61B8679F-192E-4CD5-8883-AA2CE865B19E_4_5005_c.jpeg",
+  "abrau-dyurso-abrau-estates-beloe-shardone-suhoe-12__01__E2E0CC57-6321-4058-926E-6AB20FBCFEEA_4_5005_c.jpeg",
+  "abrau-dyurso-brut-dor-blanc-de-blancs-shardone-beloe-bryut-12__01__abrau-dyurso-brut-dor-blanc-de-noirs-pino-nuar-beloe-bryut-115__img_004_adbd14925d.png",
+  "abrau-dyurso-brut-dor-blanc-de-noirs-pino-nuar-beloe-bryut-115__01__esse-blanc-de-noirs-pino-nuar-beloe-ekstra-bryut-115__img_010_40772d3b20.png"
+ ],
+ "kept_photos": 105,
+ "abrau_share_before": 0.2358,
+ "abrau_share_after": 0.1048
+}
