@@ -41,6 +41,3 @@ web/.output/
 .vscode/
 .DS_Store
 **/__MACOSX/
-
-# --- документация: README коммитим (вернули), ARCHITECTURE.md пока не трогаем ---
-ARCHITECTURE.md

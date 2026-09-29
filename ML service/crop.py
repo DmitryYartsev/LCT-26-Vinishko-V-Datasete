@@ -1,17 +1,13 @@
 # -*- coding: utf-8 -*-
-"""Кроп бутылки по COCO-YOLO (класс `bottle`, без дообучения).
+"""Кропы для retrieval и OCR.
 
-На полочном фото бутылок несколько — берём наиболее КРУПНУЮ и ЦЕНТРАЛЬНУЮ
-(пользователь целится в неё). Если бутылка не найдена — возвращаем оригинал.
+* ``BottleCropper`` — COCO-YOLO (класс ``bottle``): крупная и центральная бутылка,
+  не найдена — фото целиком (или этикетка по всему фото, ``CROP_FALLBACK=label``).
+* ``LabelCropper`` — дообученный YOLO этикетки внутри кропа бутылки.
+* ``ocr_label_crop`` — кроп этикетки для VLM с выравниванием по 4 углам (``label_align.py``).
+* Политики кропа индекса (``CROP_*``/``LABEL_*``) и запроса (``QUERY_*``, ``use_query_policy()``).
 
-ENV:
-  CROP_ENABLED=1        включить кроп (0 — выключить)
-  CROP_MODEL=yolo11n.pt  веса YOLO (скачиваются автоматически, ~6МБ)
-  CROP_MARGIN=0.06       паддинг вокруг бокса (доля от размера бутылки)
-  CROP_MIN_CONF=0.25     мин. уверенность детекции
-
-Постобработка этикетки (выравнивание по 4 углам, как в Adobe Scan) — отдельный
-модуль ``label_align.py``, включается `LABEL_ALIGN=1` (см. docstring модуля).
+Значения env выставляет ``pipeline_config.apply_retrieval_env`` из ``config/pipeline.yaml``.
 """
 import os
 from pathlib import Path
@@ -52,7 +48,7 @@ BOTTLE_CLASS = 39  # COCO id класса "bottle"
 # (`CROP_MIN_CONF=0.10`, `CROP_MIN_AREA=0.12`, fallback на этикетку по полному фото),
 # а на студийных фото каталога та же политика кроп этикетки портит.
 # Переключение — только явное и только в query-тракте: `use_query_policy()`
-# (app/pipeline/recall_at_k), индекс его не включает, эталонные кропы — `index_policy()`.
+# (app.py), индекс его не включает, эталонные кропы — `index_policy()`.
 _POLICY_ENV = {
     'CROP_PICK': 'QUERY_CROP_PICK',
     'CROP_MIN_CONF': 'QUERY_CROP_MIN_CONF',
@@ -119,8 +115,7 @@ class BottleCropper:
     def detect(self, img: Image.Image):
         """Все боксы класса `bottle`: [(x1, y1, x2, y2, conf)] в координатах img.
 
-        Отдельный метод (а не код внутри `crop`) — чтобы аудит/дебаг
-        (`ML evaluation/crop_audit.py`) видел РОВНО те боксы, что и пайплайн.
+        Отдельный метод (а не код внутри `crop`) — для дебага: те же боксы, что видит пайплайн.
         """
         res = self.model.predict(img, verbose=False, conf=policy_f('CROP_MIN_CONF'),
                                  classes=[BOTTLE_CLASS])
@@ -141,9 +136,7 @@ class BottleCropper:
         соседняя бутылка у края кадра выигрывает по площади у целевой.
 
         Вариант «выбирать бокс, содержащий главную этикетку фото» проверен и
-        отклонён: правила «главной этикетки» на полочном фото нет (net −1/−2,
-        см. Reports/15_Crop_audit.md), диагностика — флаг `wrong_bottle` в
-        `ML evaluation/crop_audit.py`.
+        отклонён: правила «главной этикетки» на полочном фото нет.
         """
         W, H = size
         cx_img, cy_img = W / 2, H / 2
@@ -189,9 +182,8 @@ _CROPPER = None
 def filter_bottle_boxes(boxes, size):
     """Отбросить боксы бутылки меньше `CROP_MIN_AREA` (доля кадра; 0 — не фильтровать).
 
-    Один источник правды для пайплайна (`BottleCropper.crop`) и аудита
-    (`ML evaluation/crop_audit.py`): иначе низкий `CROP_MIN_CONF` вытаскивает
-    крошечные ложные боксы, которые выигрывают у целевой бутылки.
+    Нужен при низком `CROP_MIN_CONF`: иначе он вытаскивает крошечные ложные боксы,
+    которые выигрывают у целевой бутылки.
     """
     if policy_f('CROP_MIN_AREA') <= 0:
         return list(boxes)
@@ -247,8 +239,8 @@ class LabelCropper:
     def detect(self, img: Image.Image):
         """Все боксы этикеток по убыванию conf: [(x1, y1, x2, y2, conf)].
 
-        Нужен аудиту (`ML evaluation/crop_audit.py`): по второму боксу видно, не
-        нашёл ли детектор контротэкетку/шейный ярлык вместо лицевой этикетки.
+        Для дебага: по второму боксу видно, не нашёл ли детектор контрэтикетку/шейный
+        ярлык вместо лицевой этикетки.
         """
         res = self.model.predict(img, verbose=False, conf=LABEL_MIN_CONF, imgsz=640)
         boxes = []
@@ -398,30 +390,3 @@ def _label_box_reliable(box, conf: float, size) -> bool:
     aspect = h / max(w, 1.0)
     return (conf >= LABEL_CROP_MIN_CONF and area >= LABEL_CROP_MIN_AREA
             and (1.0 / LABEL_CROP_MAX_ASPECT) <= aspect <= LABEL_CROP_MAX_ASPECT)
-
-
-if __name__ == "__main__":
-    import sys, glob
-    from pathlib import Path
-    sys.stdout.reconfigure(encoding="utf-8")
-    # монтаж: оригинал | кроп для 3 публичных query + 2 эталонов
-    ROOT = Path("D:/_hack/lct_26")
-    qs = sorted((ROOT / "eval_extracted/queries").glob("*.jpg")) + \
-         sorted((ROOT / "eval_extracted/queries").glob("*.webp"))
-    refs = glob.glob(str(ROOT / "solution/images/reference/massandra-muskatel-belyy*.webp"))[:2]
-    files = qs + [Path(r) for r in refs]
-    cr = BottleCropper()
-    cell = 260
-    grid = Image.new("RGB", (cell * 2, cell * len(files)), (255, 255, 255))
-    for i, f in enumerate(files):
-        orig = Image.open(f).convert("RGB")
-        crop, det = cr.crop(orig)
-        for j, im in enumerate([orig, crop]):
-            t = im.copy(); t.thumbnail((cell, cell))
-            c = Image.new("RGB", (cell, cell), (235, 235, 235))
-            c.paste(t, ((cell - t.width) // 2, (cell - t.height) // 2))
-            grid.paste(c, (j * cell, i * cell))
-        print(f"{f.name}: detected={det}  {orig.size} -> {crop.size}")
-    out = ROOT / "solution/images/_crop_test.jpg"
-    grid.save(out, quality=88)
-    print("saved", out)

@@ -78,7 +78,7 @@ def check(cfg, where: str = 'сервис') -> list:
 
 
 def _load_repo_env() -> None:
-    """Простой парсер <repo>/.env (KEY=value или KEY=\"value\") — как в pipeline.py."""
+    """Простой парсер <repo>/.env (KEY=value или KEY=\"value\")."""
     envf = Path(__file__).resolve().parents[1] / '.env'
     if not envf.is_file():
         return

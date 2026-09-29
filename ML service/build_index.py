@@ -2,7 +2,7 @@
 """Warm-up: сид каталога в Postgres + построение индекса в pgvector из filtered/.
 
 Вызывается на старте сервиса (app.startup) и как CLI. Если векторы уже есть — пропускает
-(если не --force). Размерность vector(D) берётся от текущей модели (env SEARCH_MODEL).
+(если не --force). Размерность vector(D) берётся от текущей модели (retrieval.model).
 
   docker compose exec ml python build_index.py           # собрать, если пусто
   docker compose exec ml python build_index.py --force   # пересобрать

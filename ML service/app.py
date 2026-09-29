@@ -1,15 +1,15 @@
 # -*- coding: utf-8 -*-
-"""FastAPI-сервис сканера вин (pgvector).
+"""FastAPI-сервис сканера вин: кроп → SigLIP2 + pgvector → OCR-rerank → гейт.
 
 Эндпоинты:
   POST /v1/eval/predict  — для скрипта-оценщика: multipart `image` -> {"slug": "..."}
-  POST /v1/search        — богатый ответ: top-5 + score/margin + карточка
+  POST /v1/search        — полный ответ: шорт-лист, score/margin, OCR, гейт, карточка
   GET  /wine/{slug}      — карточка по slug
   GET  /ref/{slug}       — эталонное фото
   GET  /health           — статус
 
-На старте: warm-up (сид каталога + построение индекса в pgvector, если пусто).
-Модели и пороги — через env (см. README).
+На старте: preflight, warm-up (сид каталога + индекс в pgvector, если пусто).
+Параметры — config/pipeline.yaml (Docs/configuration.md).
 """
 import os, io, sys, time
 from functools import lru_cache

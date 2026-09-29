@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """Загрузка OmegaConf-конфига пайплайна и прокидка retrieval-параметров в env.
 
-Единая точка для ``app.py`` (сервис) и ``pipeline.py`` (standalone-прогон).
-Путь к YAML: env ``PIPELINE_CONFIG`` либо ``<repo>/config/pipeline.yaml``.
+Используется ``app.py`` и CLI ``build_index.py``. Путь к YAML: env ``PIPELINE_CONFIG``
+либо ``<repo>/config/pipeline.yaml``. Выставленные здесь env перетирают внешние.
 """
 from __future__ import annotations
 
