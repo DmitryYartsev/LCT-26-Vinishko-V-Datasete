@@ -13,7 +13,7 @@ OCR-rerank (VLM читает этикетку, CsvMatcher переставляе
 
 ```bash
 cp .env.example .env     # вписать OPENROUTER_API_KEY
-docker compose up -d
+docker compose up -d --build
 ```
 
 Первый запуск скачивает данные, модели и дамп индекса (сервис `fetch`). Готово, когда
