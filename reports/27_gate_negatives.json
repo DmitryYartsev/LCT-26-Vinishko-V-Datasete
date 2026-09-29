@@ -1,5 +1,5 @@
 {
- "semantics": "год/крепость (хвостовое число слага) на тождество не влияют; сорт, цвет, сахар/тип и линейка влияют (`ML evaluation/wine_identity.py`)",
+ "semantics": "год/крепость на тождество не влияют; сорт, цвет, сахар/тип и линейка влияют (`ML evaluation/wine_identity.py`)",
  "calibration": {
   "positives": 188,
   "positives_core": 185,
@@ -10,7 +10,7 @@
   "THRESH_SCORE (HI)": 0.81,
   "THRESH_SCORE_LO": 0.7,
   "OCR_CONFIRM_CONF": 0.8,
-  "OCR_AGREE_CONF": 0.6
+  "OCR_AGREE_CONF": 0.8
  },
  "before_rule": {
   "rule": "in_catalog = top1 >= 0.75",
@@ -27,23 +27,129 @@
  },
  "after_rule": {
   "rule": "top1 >= HI или (top1 >= LO и OCR подтвердил)",
-  "tp": 132,
+  "tp": 131,
   "fp": 33,
-  "fn": 23,
-  "prec": 0.8,
-  "rec": 0.8516,
-  "f1": 0.825,
-  "pos_acc": 165,
-  "pos_lost": 23,
+  "fn": 24,
+  "prec": 0.7988,
+  "rec": 0.8452,
+  "f1": 0.8213,
+  "pos_acc": 164,
+  "pos_lost": 24,
   "neg_acc": 0,
   "neg_total": 8
  },
  "delta": {
   "negatives_accepted": "4/8 → 0/8",
-  "positives_lost": "7 → 23",
-  "f1": "0.8293 → 0.825",
-  "precision_of_shown_cards": "0.7351 → 0.8"
+  "positives_with_card": "181 → 164 из 188",
+  "f1": "0.8293 → 0.8213",
+  "precision_of_shown_cards": "0.7351 → 0.7988"
  },
+ "agree_threshold_sweep": {
+  "0.60": {
+   "f1": 0.825,
+   "cards": 165
+  },
+  "0.70": {
+   "f1": 0.8213,
+   "cards": 164
+  },
+  "0.80": {
+   "f1": 0.8213,
+   "cards": 164
+  },
+  "0.85": {
+   "f1": 0.8176,
+   "cards": 163
+  },
+  "0.90": {
+   "f1": 0.8139,
+   "cards": 162
+  },
+  "выключена": {
+   "f1": 0.791,
+   "cards": 156
+  }
+ },
+ "live_sampling_negative_alveus": {
+  "image": "data/negatives/97.08_05-09-2026_15-30-50.webp",
+  "top1": 0.7817,
+  "calls_agree_0.60": [
+   {
+    "reason": "ocr_agrees",
+    "csv": 0.7352,
+    "in_catalog": true
+   },
+   {
+    "reason": "ocr_agrees",
+    "csv": 0.7065,
+    "in_catalog": true
+   },
+   {
+    "reason": "csv_ambiguous",
+    "csv": 0.8615,
+    "in_catalog": false
+   },
+   {
+    "reason": "csv_ambiguous",
+    "csv": 0.6398,
+    "in_catalog": false
+   },
+   {
+    "reason": "csv_ambiguous",
+    "csv": 0.8615,
+    "in_catalog": false
+   }
+  ],
+  "calls_agree_0.80": [
+   {
+    "reason": "ocr_not_confirmed",
+    "csv": 0.7352,
+    "in_catalog": false
+   },
+   {
+    "reason": "ocr_not_confirmed",
+    "csv": 0.8615,
+    "in_catalog": false
+   },
+   {
+    "reason": "ocr_not_confirmed",
+    "csv": 0.7352,
+    "in_catalog": false
+   },
+   {
+    "reason": "ocr_not_confirmed",
+    "csv": 0.7065,
+    "in_catalog": false
+   },
+   {
+    "reason": "ocr_not_confirmed",
+    "csv": 0.7352,
+    "in_catalog": false
+   }
+  ]
+ },
+ "live_check_e2e_web": [
+  {
+   "case": "НЕГАТИВ 97.08 через POST /api/scan",
+   "in_catalog": false,
+   "payload": {
+    "similar": 6,
+    "analogs": 4
+   }
+  },
+  {
+   "case": "ПОЗИТИВ 48.98 через POST /api/scan",
+   "in_catalog": true,
+   "gate_reason": "visual_hi",
+   "top1": 0.8255
+  },
+  {
+   "case": "ПОЗИТИВ 68.81 напрямую /v1/search",
+   "in_catalog": true,
+   "gate_reason": "ocr_agrees",
+   "csv_confidence": 0.9586
+  }
+ ],
  "negatives": [
   {
    "image": "94.83_27-08-2026_14-29-28.webp",
@@ -185,28 +291,6 @@
    "ocr_sugar": "сухое",
    "conflicts": [],
    "verdict": "positive_vintage"
-  }
- ],
- "live_check": [
-  {
-   "case": "НЕГАТИВ 97.08 (ALVEUS, top1 0.7817, csv 0.8615)",
-   "in_catalog": false,
-   "gate_reason": "ocr_not_confirmed"
-  },
-  {
-   "case": "НЕГАТИВ 94.83 (CHÂTEAU PINOT, top1 0.8085 — самый «похожий»)",
-   "in_catalog": false,
-   "gate_reason": "ocr_not_confirmed"
-  },
-  {
-   "case": "ПОЗИТИВ 48.98 (top1 0.8255, csv 0.9559)",
-   "in_catalog": true,
-   "gate_reason": "visual_hi"
-  },
-  {
-   "case": "ПОЗИТИВ 68.81 (top1 0.7495, csv_agrees 0.9586)",
-   "in_catalog": true,
-   "gate_reason": "ocr_agrees"
   }
  ]
 }

@@ -41,7 +41,7 @@ import preflight
 THRESH_SCORE = float(os.environ.get("THRESH_SCORE", "0.81"))       # HI: карточка сразу
 THRESH_SCORE_LO = float(os.environ.get("THRESH_SCORE_LO", "0.70"))  # LO: ниже — «нет в каталоге»
 OCR_CONFIRM_CONF = float(os.environ.get("OCR_CONFIRM_CONF", "0.80"))  # уверенность OCR-переранка
-OCR_AGREE_CONF = float(os.environ.get("OCR_AGREE_CONF", "0.60"))      # уверенность «OCR согласен»
+OCR_AGREE_CONF = float(os.environ.get("OCR_AGREE_CONF", "0.80"))      # уверенность «OCR согласен»
 THRESH_MARGIN = float(os.environ.get("THRESH_MARGIN", "0.015"))
 # SEARCH_PIPELINE: combined = бутылка + этикетка (макс. score), bottle = только бутылка,
 # label = только этикетка. Отбор ветки — по максимальному top-1 score.

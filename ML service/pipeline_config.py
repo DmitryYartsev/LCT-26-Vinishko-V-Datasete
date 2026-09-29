@@ -50,7 +50,7 @@ def apply_retrieval_env(cfg) -> None:
     # Гейт «есть в каталоге»: между LO и HI карточка показывается только если OCR
     # подтвердил кандидата (см. reports/27_gate_negatives.md).
     os.environ['OCR_CONFIRM_CONF'] = str(getattr(cfg.ocr, 'confirm_confidence', 0.80))
-    os.environ['OCR_AGREE_CONF'] = str(getattr(cfg.csv_match, 'agree_confidence', 0.60))
+    os.environ['OCR_AGREE_CONF'] = str(getattr(cfg.csv_match, 'agree_confidence', 0.80))
     os.environ['DATABASE_URL'] = str(r.database_url)
     # политика кропа (аудит Reports/15_Crop_audit.md). Исторические значения по
     # умолчанию: старые конфиги и уже собранный индекс остаются валидными.
