@@ -1,0 +1,310 @@
+[
+ {
+  "image": "1589111346142057682.jpg",
+  "true_slug": null,
+  "kind": "negative",
+  "pos": {
+   "branch": "bottle",
+   "top1_slug": "a-gordienko-m-nikolaev-pino-nuar-krasnoe-suhoe-135",
+   "top1": 0.7423,
+   "top2": 0.7354,
+   "margin": 0.0069,
+   "ranking": [
+    "a-gordienko-m-nikolaev-pino-nuar-krasnoe-suhoe-135",
+    "privat",
+    "krasnostop-zolotovskij",
+    "blagolyubov-muskat-ottonel-beloe-suhoe-125",
+    "abrau-dyurso-pino-nuar-krasnoe-suhoe-125",
+    "vinodelnya-begildeeva-kaberne-sovinon-krasnoe-suhoe-14"
+   ],
+   "scores": [
+    0.7423,
+    0.7354,
+    0.7323,
+    0.731,
+    0.7295,
+    0.7285
+   ]
+  }
+ },
+ {
+  "image": "1668423139118232264.jpg",
+  "true_slug": null,
+  "kind": "negative",
+  "pos": {
+   "branch": "label",
+   "top1_slug": "vaynkraft-sovinon-blan-beloe-suhoe-13",
+   "top1": 0.6793,
+   "top2": 0.6451,
+   "margin": 0.0342,
+   "ranking": [
+    "vaynkraft-sovinon-blan-beloe-suhoe-13",
+    "stn-winery-bratstvo-kochergi-pino-nuar-krasnoe-suhoe-12",
+    "vibes-pinot-grigio-2021",
+    "domaine-de-la-vivandiere-alkomishka-malbek-krasnoe-suhoe-123",
+    "shato-pino-shardone-beloe-suhoe-125",
+    "villa-urkusta-kaberne-sovinon-blan-de-nuar-beloe-suhoe-13"
+   ],
+   "scores": [
+    0.6793,
+    0.6451,
+    0.6314,
+    0.6288,
+    0.6286,
+    0.6275
+   ]
+  }
+ },
+ {
+  "image": "2658847.webp",
+  "true_slug": null,
+  "kind": "negative",
+  "pos": {
+   "branch": "bottle",
+   "top1_slug": "vinnyy-kooperativ-intuitsiya-kaberne-sovinon-merlo-saperavi-krasnoe-suhoe-128",
+   "top1": 0.7637,
+   "top2": 0.7576,
+   "margin": 0.0061,
+   "ranking": [
+    "vinnyy-kooperativ-intuitsiya-kaberne-sovinon-merlo-saperavi-krasnoe-suhoe-128",
+    "kaberne-sovinon-appasimento",
+    "kaberne-sovinon-1",
+    "vinodelnya-berdyaeva-kaberne-fran-krasnoe-suhoe-115",
+    "mons-albus-kaberne-sovinon-krasnoe-suhoe-14",
+    "bakla-vines-kaberne-fran-krasnoe-suhoe-143"
+   ],
+   "scores": [
+    0.7637,
+    0.7576,
+    0.756,
+    0.7476,
+    0.7439,
+    0.7422
+   ]
+  }
+ },
+ {
+  "image": "90.5_02-09-2026_10-32-11.webp",
+  "true_slug": null,
+  "kind": "negative",
+  "pos": {
+   "branch": "label",
+   "top1_slug": "vinodelnya-pokrovskaya-pokrovskoe-sladkoe-krasnoe-kaberne-sovinon-13",
+   "top1": 0.7285,
+   "top2": 0.7183,
+   "margin": 0.0102,
+   "ranking": [
+    "vinodelnya-pokrovskaya-pokrovskoe-sladkoe-krasnoe-kaberne-sovinon-13",
+    "soyuz-vino-kubanskoe-traditsionnoe-beloe-polusladkoe-07-belye-sorta-vinograda-11",
+    "viktor-stashko-kaberne-fran-krasnoe-suhoe-145",
+    "soyuz-vino-lenty-izabella-krymskaya-krasnoe-polusladkoe-11",
+    "polusladkoe-krasnoe-zolotaya-balka",
+    "lorio-kaberne-sovinon-i-pino-nuar"
+   ],
+   "scores": [
+    0.7285,
+    0.7183,
+    0.7182,
+    0.715,
+    0.7133,
+    0.7099
+   ]
+  }
+ },
+ {
+  "image": "94.83_27-08-2026_14-29-28.webp",
+  "true_slug": null,
+  "kind": "negative",
+  "pos": {
+   "branch": "label",
+   "top1_slug": "shato-pino-aligote-rkatsiteli-beloe-suhoe-12",
+   "top1": 0.8085,
+   "top2": 0.78,
+   "margin": 0.0285,
+   "ranking": [
+    "shato-pino-aligote-rkatsiteli-beloe-suhoe-12",
+    "shato-pino-marselan-merlo-krasnoe-suhoe-13",
+    "shato-pino-exclusive-vione-risling-beloe-suhoe-115",
+    "shato-pino-sovinon-blan-semilon-beloe-suhoe-115",
+    "shato-pino-aligote-rkatsiteli-suhoe-beloe-12",
+    "shato-pino-shardone-risling-beloe-suhoe-12"
+   ],
+   "scores": [
+    0.8085,
+    0.78,
+    0.7618,
+    0.7614,
+    0.7558,
+    0.7507
+   ]
+  }
+ },
+ {
+  "image": "94.8_01-09-2026_10-10-02.webp",
+  "true_slug": null,
+  "kind": "negative",
+  "pos": {
+   "branch": "label",
+   "top1_slug": "polusladkoe-krasnoe-zolotaya-balka",
+   "top1": 0.7629,
+   "top2": 0.7602,
+   "margin": 0.0027,
+   "ranking": [
+    "polusladkoe-krasnoe-zolotaya-balka",
+    "portvejn-krymskij",
+    "sary-pandas-vyderzhannoe",
+    "usadba-aleksandrovskaya-bubnovyy-valet-kaberne-sovinon-krasnoe-polusladkoe-13",
+    "semeynaya-vinodelnya-mihaila-kolesnikova-ispanets-kaberne-sovinon-krasnoe-suhoe-148",
+    "perovskih_aligote"
+   ],
+   "scores": [
+    0.7629,
+    0.7602,
+    0.7564,
+    0.7501,
+    0.7446,
+    0.7394
+   ]
+  }
+ },
+ {
+  "image": "96.2_28-08-2026_19-25-29.webp",
+  "true_slug": null,
+  "kind": "negative",
+  "pos": {
+   "branch": "label",
+   "top1_slug": "derbent-vino-graf-vorontsov-beloe-polusladkoe-sovinon-blan-105-125",
+   "top1": 0.7945,
+   "top2": 0.7839,
+   "margin": 0.0106,
+   "ranking": [
+    "derbent-vino-graf-vorontsov-beloe-polusladkoe-sovinon-blan-105-125",
+    "novyy-svet-dom-shampanskih-vin-rossiyskoe-shampanskoe-kollektsionnoe-bryut-beloe-novyy-svet-yubileynoe-risling-13",
+    "novyy-svet-dom-shampanskih-vin-rossiyskoe-shampanskoe-kollektsionnoe-bryut-beloe-novyy-svet-zolotoy-risling-suhoe-13",
+    "abrau-dyurso-russkoe-igristoe-koshernoe-polusladkoe-shardone-beloe-12",
+    "derbent-vino-graf-vorontsov-bryut-beloe-sovinon-blan-105-125",
+    "abrau-dyurso-russkoe-igristoe-koshernoe-bryut-shardone-beloe-13"
+   ],
+   "scores": [
+    0.7945,
+    0.7839,
+    0.777,
+    0.7748,
+    0.7744,
+    0.7698
+   ]
+  }
+ },
+ {
+  "image": "96.44_05-09-2026_15-33-59.webp",
+  "true_slug": null,
+  "kind": "negative",
+  "pos": {
+   "branch": "bottle",
+   "top1_slug": "aratti-sovinon-blan-beloe-polusuhoe",
+   "top1": 0.7968,
+   "top2": 0.7906,
+   "margin": 0.0062,
+   "ranking": [
+    "aratti-sovinon-blan-beloe-polusuhoe",
+    "sovinon-blan-krasnaya-gorka",
+    "imenie-sikory-sovinon-blan-semeynyy-rezerv-beloe-suhoe-13",
+    "vinodelnya-78-aligote-otbornoe-beloe-suhoe-12",
+    "vinodelnya-78-muskat-otbornyy-muskat-yantarnyy-beloe-suhoe-125",
+    "valeriy-zaharin-sovinon-blan-valeriy-zaharin-beloe-polusladkoe-105"
+   ],
+   "scores": [
+    0.7968,
+    0.7906,
+    0.7777,
+    0.7668,
+    0.7647,
+    0.76
+   ]
+  }
+ },
+ {
+  "image": "97.08_05-09-2026_15-30-50.webp",
+  "true_slug": null,
+  "kind": "negative",
+  "pos": {
+   "branch": "bottle",
+   "top1_slug": "fanagoriya-alveus-ultra-cuvee-bryut-rozovoe-merlo-igristoe-bryut-rozovoe-12",
+   "top1": 0.7817,
+   "top2": 0.7679,
+   "margin": 0.0138,
+   "ranking": [
+    "fanagoriya-alveus-ultra-cuvee-bryut-rozovoe-merlo-igristoe-bryut-rozovoe-12",
+    "fanagoriya-alveus-ultra-cuvee-brut-shardone-beloe-bryut-12",
+    "fanagoriya-alveus-ultra-cuvee-ekstra-bryut-rozovoe-merlo-12",
+    "fanagoriya-alveus-ultra-cuvee-ekstra-bryut-beloe-risling-reynskiy-12",
+    "abrau-dyurso-victor-dravigny-polusuhoe-pino-blan-beloe-12",
+    "abrau-dyurso-russkoe-igristoe-polusuhoe-shardone-beloe-12"
+   ],
+   "scores": [
+    0.7817,
+    0.7679,
+    0.7555,
+    0.7401,
+    0.7364,
+    0.7339
+   ]
+  }
+ },
+ {
+  "image": "images (1).jpeg",
+  "true_slug": null,
+  "kind": "negative",
+  "pos": {
+   "branch": "label",
+   "top1_slug": "zmv-koktebel-bastardo-krasnoe-suhoe-14",
+   "top1": 0.7476,
+   "top2": 0.7416,
+   "margin": 0.006,
+   "ranking": [
+    "zmv-koktebel-bastardo-krasnoe-suhoe-14",
+    "zmv-koktebel-shardone-beloe-suhoe-12",
+    "zmv-koktebel-grand-kupazh-kaberne-sovinon-krasnoe-suhoe-13",
+    "znoj-denisov-vajneri",
+    "zmv-koktebel-merlo-krasnoe-suhoe-13",
+    "viognier-special-reserve"
+   ],
+   "scores": [
+    0.7476,
+    0.7416,
+    0.738,
+    0.7139,
+    0.7007,
+    0.6957
+   ]
+  }
+ },
+ {
+  "image": "images.jpeg",
+  "true_slug": null,
+  "kind": "negative",
+  "pos": {
+   "branch": "bottle",
+   "top1_slug": "vinodelnya-myshako-sesto-senso-fruktovyy-vzryv-kaberne-sovinon-krasnoe-suhoe-155",
+   "top1": 0.7558,
+   "top2": 0.7522,
+   "margin": 0.0036,
+   "ranking": [
+    "vinodelnya-myshako-sesto-senso-fruktovyy-vzryv-kaberne-sovinon-krasnoe-suhoe-155",
+    "vinodelnya-myshako-sesto-senso-yagodnyy-vzryv-merlo-rozovoe-suhoe-122",
+    "zolotoe-pole-kaffa-shardone-beloe-suhoe-125",
+    "zmv-koktebel-bastardo-krasnoe-suhoe-14",
+    "zmv-koktebel-grand-kupazh-kaberne-sovinon-krasnoe-suhoe-13",
+    "vinodelnya-vedernikov-kaberne-sovinon-krasnoe-suhoe-14"
+   ],
+   "scores": [
+    0.7558,
+    0.7522,
+    0.7497,
+    0.7495,
+    0.7429,
+    0.7417
+   ]
+  }
+ }
+]

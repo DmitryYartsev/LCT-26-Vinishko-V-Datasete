@@ -1,0 +1,141 @@
+[
+ {
+  "image": "94.83_27-08-2026_14-29-28.webp",
+  "top1": 0.8085,
+  "closest_slug": "shato-pino-aligote-rkatsiteli-beloe-suhoe-12",
+  "ocr_winery": "CHÂTEAU PINOT",
+  "ocr_grape": "",
+  "ocr_color": "белое",
+  "ocr_sugar": "белое тихое",
+  "conflicts": [
+   "сахар: каталог сухое vs этикетка белое тихое"
+  ],
+  "verdict": "negative"
+ },
+ {
+  "image": "96.44_05-09-2026_15-33-59.webp",
+  "top1": 0.7968,
+  "closest_slug": "aratti-sovinon-blan-beloe-polusuhoe",
+  "ocr_winery": "Литавщуков",
+  "ocr_grape": "Совиньон Блан",
+  "ocr_color": "белое",
+  "ocr_sugar": "полусухое",
+  "conflicts": [],
+  "verdict": "positive_vintage"
+ },
+ {
+  "image": "96.2_28-08-2026_19-25-29.webp",
+  "top1": 0.7945,
+  "closest_slug": "derbent-vino-graf-vorontsov-beloe-polusladkoe-sovinon-blan-105-125",
+  "ocr_winery": "Лев Голицыны",
+  "ocr_grape": "",
+  "ocr_color": "",
+  "ocr_sugar": "брют",
+  "conflicts": [
+   "сахар: каталог полусладкое vs этикетка брют"
+  ],
+  "verdict": "negative"
+ },
+ {
+  "image": "97.08_05-09-2026_15-30-50.webp",
+  "top1": 0.7817,
+  "closest_slug": "fanagoriya-alveus-ultra-cuvee-bryut-rozovoe-merlo-igristoe-bryut-rozovoe-12",
+  "ocr_winery": "ALVEUS",
+  "ocr_grape": "",
+  "ocr_color": "",
+  "ocr_sugar": "брют",
+  "conflicts": [
+   "сахар: каталог сухое vs этикетка брют"
+  ],
+  "verdict": "negative"
+ },
+ {
+  "image": "2658847.webp",
+  "top1": 0.7637,
+  "closest_slug": "vinnyy-kooperativ-intuitsiya-kaberne-sovinon-merlo-saperavi-krasnoe-suhoe-128",
+  "ocr_winery": "Авантиорн",
+  "ocr_grape": "Каберне Совиньон",
+  "ocr_color": "красное",
+  "ocr_sugar": "красное тихое",
+  "conflicts": [
+   "сахар: каталог сухое vs этикетка красное тихое"
+  ],
+  "verdict": "negative"
+ },
+ {
+  "image": "94.8_01-09-2026_10-10-02.webp",
+  "top1": 0.7629,
+  "closest_slug": "polusladkoe-krasnoe-zolotaya-balka",
+  "ocr_winery": "Mogzauri",
+  "ocr_grape": "",
+  "ocr_color": "красное",
+  "ocr_sugar": "полусладкое",
+  "conflicts": [],
+  "verdict": "positive_vintage"
+ },
+ {
+  "image": "images.jpeg",
+  "top1": 0.7558,
+  "closest_slug": "vinodelnya-myshako-sesto-senso-fruktovyy-vzryv-kaberne-sovinon-krasnoe-suhoe-155",
+  "ocr_winery": "Gusto",
+  "ocr_grape": "",
+  "ocr_color": "красное",
+  "ocr_sugar": "сухое",
+  "conflicts": [],
+  "verdict": "positive_vintage"
+ },
+ {
+  "image": "images (1).jpeg",
+  "top1": 0.7476,
+  "closest_slug": "zmv-koktebel-bastardo-krasnoe-suhoe-14",
+  "ocr_winery": "CASA LORETTI",
+  "ocr_grape": "",
+  "ocr_color": "белое",
+  "ocr_sugar": "белое тихое",
+  "conflicts": [
+   "цвет: каталог красное vs этикетка белое",
+   "сахар: каталог сухое vs этикетка белое тихое"
+  ],
+  "verdict": "negative"
+ },
+ {
+  "image": "1589111346142057682.jpg",
+  "top1": 0.7423,
+  "closest_slug": "a-gordienko-m-nikolaev-pino-nuar-krasnoe-suhoe-135",
+  "ocr_winery": "KD",
+  "ocr_grape": "Изабелла",
+  "ocr_color": "красное",
+  "ocr_sugar": "полусладкое",
+  "conflicts": [
+   "сахар: каталог сухое vs этикетка полусладкое"
+  ],
+  "verdict": "negative"
+ },
+ {
+  "image": "90.5_02-09-2026_10-32-11.webp",
+  "top1": 0.7285,
+  "closest_slug": "vinodelnya-pokrovskaya-pokrovskoe-sladkoe-krasnoe-kaberne-sovinon-13",
+  "ocr_winery": "Буссо",
+  "ocr_grape": "",
+  "ocr_color": "розовое",
+  "ocr_sugar": "полусладкое",
+  "conflicts": [
+   "цвет: каталог красное vs этикетка розовое"
+  ],
+  "verdict": "negative"
+ },
+ {
+  "image": "1668423139118232264.jpg",
+  "top1": 0.6793,
+  "closest_slug": "vaynkraft-sovinon-blan-beloe-suhoe-13",
+  "ocr_winery": "",
+  "ocr_grape": "Zinfandel",
+  "ocr_color": "красное",
+  "ocr_sugar": "красное тихое",
+  "conflicts": [
+   "цвет: каталог белое vs этикетка красное",
+   "сахар: каталог сухое vs этикетка красное тихое"
+  ],
+  "verdict": "negative"
+ }
+]
