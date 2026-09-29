@@ -1,0 +1,215 @@
+{
+ "note": "exact — совпал слаг; same — «то же вино» (год/крепость не влияют, сорт/цвет/сахар/линейка влияют); recall «с OCR»: [final_slug] + пул без него; истина берётся из data/eval62.csv и data/eval2.csv",
+ "sets": {
+  "62": {
+   "exact": {
+    "n": 62,
+    "accuracy_retrieval": 0.8065,
+    "accuracy_final_with_ocr": 0.871,
+    "recall_retrieval": {
+     "@1": 0.8065,
+     "@5": 0.8548,
+     "@10": 0.8548,
+     "@30": 0.8871
+    },
+    "recall_with_ocr": {
+     "@1": 0.871,
+     "@5": 0.9194,
+     "@10": 0.9194,
+     "@30": 0.9355
+    },
+    "counts": {
+     "n": 62,
+     "correct_retrieval": 50,
+     "correct_final": 54,
+     "recall_retrieval": {
+      "1": 50,
+      "5": 53,
+      "10": 53,
+      "30": 55
+     },
+     "recall_with_ocr": {
+      "1": 54,
+      "5": 57,
+      "10": 57,
+      "30": 58
+     }
+    }
+   },
+   "same": {
+    "n": 62,
+    "accuracy_retrieval": 0.8226,
+    "accuracy_final_with_ocr": 0.8871,
+    "recall_retrieval": {
+     "@1": 0.8226,
+     "@5": 0.8548,
+     "@10": 0.8548,
+     "@30": 0.8871
+    },
+    "recall_with_ocr": {
+     "@1": 0.8871,
+     "@5": 0.9194,
+     "@10": 0.9194,
+     "@30": 0.9355
+    },
+    "counts": {
+     "n": 62,
+     "correct_retrieval": 51,
+     "correct_final": 55,
+     "recall_retrieval": {
+      "1": 51,
+      "5": 53,
+      "10": 53,
+      "30": 55
+     },
+     "recall_with_ocr": {
+      "1": 55,
+      "5": 57,
+      "10": 57,
+      "30": 58
+     }
+    }
+   }
+  },
+  "eval2 (123)": {
+   "exact": {
+    "n": 123,
+    "accuracy_retrieval": 0.6748,
+    "accuracy_final_with_ocr": 0.6667,
+    "recall_retrieval": {
+     "@1": 0.6911,
+     "@5": 0.9106,
+     "@10": 0.9268,
+     "@30": 0.9431
+    },
+    "recall_with_ocr": {
+     "@1": 0.6667,
+     "@5": 0.9106,
+     "@10": 0.9268,
+     "@30": 0.9431
+    },
+    "counts": {
+     "n": 123,
+     "correct_retrieval": 83,
+     "correct_final": 82,
+     "recall_retrieval": {
+      "1": 85,
+      "5": 112,
+      "10": 114,
+      "30": 116
+     },
+     "recall_with_ocr": {
+      "1": 82,
+      "5": 112,
+      "10": 114,
+      "30": 116
+     }
+    }
+   },
+   "same": {
+    "n": 123,
+    "accuracy_retrieval": 0.6748,
+    "accuracy_final_with_ocr": 0.6667,
+    "recall_retrieval": {
+     "@1": 0.6911,
+     "@5": 0.9106,
+     "@10": 0.9268,
+     "@30": 0.9431
+    },
+    "recall_with_ocr": {
+     "@1": 0.6667,
+     "@5": 0.9106,
+     "@10": 0.9268,
+     "@30": 0.9431
+    },
+    "counts": {
+     "n": 123,
+     "correct_retrieval": 83,
+     "correct_final": 82,
+     "recall_retrieval": {
+      "1": 85,
+      "5": 112,
+      "10": 114,
+      "30": 116
+     },
+     "recall_with_ocr": {
+      "1": 82,
+      "5": 112,
+      "10": 114,
+      "30": 116
+     }
+    }
+   }
+  }
+ },
+ "total": {
+  "exact": {
+   "n": 185,
+   "accuracy_retrieval": 0.7189,
+   "accuracy_final_with_ocr": 0.7351,
+   "recall_retrieval": {
+    "@1": 0.7297,
+    "@5": 0.8919,
+    "@10": 0.9027,
+    "@30": 0.9243
+   },
+   "recall_with_ocr": {
+    "@1": 0.7351,
+    "@5": 0.9135,
+    "@10": 0.9243,
+    "@30": 0.9405
+   },
+   "counts": {
+    "n": 185,
+    "correct_retrieval": 133,
+    "correct_final": 136,
+    "recall_retrieval": {
+     "1": 135,
+     "5": 165,
+     "10": 167,
+     "30": 171
+    },
+    "recall_with_ocr": {
+     "1": 136,
+     "5": 169,
+     "10": 171,
+     "30": 174
+    }
+   }
+  },
+  "same": {
+   "n": 185,
+   "accuracy_retrieval": 0.7243,
+   "accuracy_final_with_ocr": 0.7405,
+   "recall_retrieval": {
+    "@1": 0.7351,
+    "@5": 0.8919,
+    "@10": 0.9027,
+    "@30": 0.9243
+   },
+   "recall_with_ocr": {
+    "@1": 0.7405,
+    "@5": 0.9135,
+    "@10": 0.9243,
+    "@30": 0.9405
+   },
+   "counts": {
+    "n": 185,
+    "correct_retrieval": 134,
+    "correct_final": 137,
+    "recall_retrieval": {
+     "1": 136,
+     "5": 165,
+     "10": 167,
+     "30": 171
+    },
+    "recall_with_ocr": {
+     "1": 137,
+     "5": 169,
+     "10": 171,
+     "30": 174
+    }
+   }
+  }
+ }
+}
